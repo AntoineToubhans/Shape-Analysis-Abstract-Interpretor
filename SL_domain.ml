@@ -22,6 +22,7 @@ module SL_Domain =
     let empty: t = G.empty, P.empty
     	
     let fusion: int -> int -> t -> t = fun i j (g, p) ->
+      if debug then print_debug "SL_DOMAIN: fusion %i %i t\n" i j;
       if i==j then 
 	(g, p) 
       else if not (P.is_live i p) then
@@ -35,7 +36,9 @@ module SL_Domain =
       try
 	let i, j = get (P.pop_equality p) in
 	  reduce_egalities (fusion i j (g, p))
-      with | No_value -> (g, p)
+      with | No_value -> 
+	if debug then print_debug "SL_DOMAIN: reduced_egalities...\n";
+	(g, p)
       
     let malloc: offset list -> t -> int*t = fun ol (g, p) ->
       let i, g = G.create_fresh_node g in
@@ -43,6 +46,7 @@ module SL_Domain =
       let p = List.fold_left (fun p j -> if j!=i then P.add_neq i j p else p) p (G.domain g) in
 	i, (g, p)
       
+	  
 
     let pp: t -> string = fun (g, p) -> 
       Printf.sprintf "-----Print SL_DOMAIN ------\n%s%s" (P.pp p) (G.pp g)

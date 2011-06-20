@@ -147,7 +147,7 @@ module SL_GRAPH_DOMAIN =
 	  inductive = change_inductive n.inductive;} 
       and merging: int option -> int option -> int option = 
 	function | None -> (fun x -> x) | x -> (function | None -> x | _ -> raise Bottom) 
-      (* I had to duplicates merging 'a option -> 'a option -> 'a option, odesn't work... *)
+      (* I had to duplicate merging 'a option -> 'a option -> 'a option, doesn't work otherwise... *)
       and merging0: inductive option -> inductive option -> inductive option = 
  	function | None -> (fun x -> x) | x -> (function | None -> x | _ -> raise Bottom) in
       let merge_node: node -> node -> node = fun n m ->
@@ -170,13 +170,29 @@ module SL_GRAPH_DOMAIN =
 	       {nodes = IntMap.map change_node t.nodes;
 		next  = if t.next==i+1 then i else t.next;}
 
-  
-    let is_reached_by_edge: int -> (int -> offset -> bool) -> t -> int list = fun i p t -> []
+    (* computes all j such that: *)
+    (*  -  j@o |--> i            *)
+    (*  -  p j o                 *)
+    let is_reached_by_edge: int -> (int -> offset -> bool) -> t -> int list = fun i p t ->
+      if debug then print_debug "SL_GRAPH_DOMAIN: is_reached_by_edge %i p t\n" i;
+      IntMap.fold
+ 	(fun j n l -> OffsetMap.fold (fun o k l -> if k==i && p j o then j::l else l) n.edges l)
+	t.nodes
+	[]
 
-    let is_reached_by_inductive: int -> (int -> inductive -> bool) -> t -> int list = fun i p t -> []
+    (* computes all j such that: *)
+    (*  -  j.c(a) *== i.c(b)     *)
+    (*  -  p j a b               *)
+    let is_reached_by_inductive: int -> (int -> inductive -> bool) -> t -> int list = fun i p t -> 
+      if debug then print_debug "SL_GRAPH_DOMAIN: is_reached_by_inductive %i p t\n" i;
+      IntMap.fold
+	(fun j n l -> map_default (fun ind -> if p j ind && ind.target==i then j::l else l) l n.inductive)
+	t.nodes
+	[]
 
-    let is_reached: int -> t -> int list = fun i t ->
-      List.append (is_reached_by_edge i (fun _ _ -> true) t) (is_reached_by_inductive i (fun _ _ -> true) t)	
+    let is_reached: int -> (int -> bool) -> t -> int list = fun i p t ->
+      if debug then print_debug "SL_GRAPH_DOMAIN: is_reached %i p t\n" i;
+      List.append (is_reached_by_edge i (fun i _ -> p i) t) (is_reached_by_inductive i (fun i _ -> p i) t)	
 
 
     (* may contains duplicates *)

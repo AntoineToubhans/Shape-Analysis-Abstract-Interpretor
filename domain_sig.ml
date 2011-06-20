@@ -49,7 +49,7 @@ module type SL_GRAPH_DOMAIN =
 
     val is_reached_by_edge: int -> (int -> offset -> bool) -> t -> int list
     val is_reached_by_inductive: int -> (int -> inductive -> bool) -> t -> int list 
-    val is_reached: int -> t -> int list
+    val is_reached: int -> (int -> bool) -> t -> int list
 
     val domain: t -> int list
     val pp: t -> string
@@ -93,6 +93,11 @@ module type SL_DOMAIN =
     val reduce_egalities: t -> t
 
     val malloc: offset list -> t -> int*t
+
+    val break_inductive_backward: int -> int -> t -> t list
+    val break_inductive_forward: int -> int -> t -> t list
+
+    val unfold: int -> t -> t list
 
     val canonicalize: t -> t     
     val find: int -> offset -> t -> (offset * int) list
