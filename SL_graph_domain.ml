@@ -84,6 +84,10 @@ module SL_GRAPH_DOMAIN =
       add_inductive i ind (remove_inductive i t)
 
 
+    let create_fresh_node: t -> (int* t) = fun t ->
+      if debug then print_debug "SL_GRAPH_DOMAIN: create_fresh_node.....%i\n" t.next;
+      t.next, {t with next = t.next + 1}
+
     let get_edge: int -> offset -> t -> int option = fun i o t ->
       try 
 	let j = OffsetMap.find o (IntMap.find i t.nodes).edges in

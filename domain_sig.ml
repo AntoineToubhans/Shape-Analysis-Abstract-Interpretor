@@ -35,6 +35,8 @@ module type SL_GRAPH_DOMAIN =
     val remove_inductive: int -> t -> t
     val update_inductive: int -> inductive -> t -> t
 
+    val create_fresh_node: t -> int* t
+
     val get_edge: int -> offset -> t -> int option
     val get_inductive: int -> t -> inductive option
 
@@ -60,12 +62,19 @@ module type PRED_DOMAIN =
     val empty: t
     val is_top: t -> bool
     val is_bottom: t -> bool
+    val check_bottom: t -> t
 
     val is_live: int -> t -> bool
+    val are_not_equal: int -> int -> t -> bool
+
+    (* usefull to perform egalities reduction in SL_DOMAIN *)
+    val pop_equality: t -> (int*int) option
 
     val add_neq: int -> int -> t -> t
     val add_eq: int -> int -> t -> t 
     val add_live: int -> t -> t
+
+    val forget: int -> t -> t
 
     val fusion: int -> int -> t -> t
 
@@ -75,18 +84,21 @@ module type PRED_DOMAIN =
 module type SL_DOMAIN = 
   sig
     module G: SL_GRAPH_DOMAIN
-    module E: PRED_DOMAIN
+    module P: PRED_DOMAIN
 
-    val domainId : int   
     type t
+    val empty: t
 
     val fusion: int -> int -> t -> t 
+    val reduce_egalities: t -> t
 
-    val malloc: offset list -> t -> t* int
+    val malloc: offset list -> t -> int*t
 
     val canonicalize: t -> t     
     val find: int -> offset -> t -> (offset * int) list
     val deffer: t -> int -> offset -> int 
+
+    val pp: t -> string
   end
 
 module type DOMAIN = 
