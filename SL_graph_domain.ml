@@ -84,6 +84,50 @@ module SL_GRAPH_DOMAIN =
       add_inductive i ind (remove_inductive i t)
 
 
+    let get_edge: int -> offset -> t -> int option = fun i o t ->
+      try 
+	let j = OffsetMap.find o (IntMap.find i t.nodes).edges in
+	  if debug then print_debug "SL_GRAPH_DOMAIN:get_edge %i %s t.....%i\n" i (pp_offset o) j;
+	  Some j
+      with
+	| Not_found -> 
+	    if debug then print_debug "SL_GRAPH_DOMAIN:get_edge %i %s t.....None\n" i (pp_offset o);
+	    None
+	      
+    let get_inductive: int -> t -> inductive option = fun i t ->
+      try
+	let ind = get (IntMap.find i t.nodes).inductive in
+	  if debug then print_debug "SL_GRAPH_DOMAIN:get_inductive %i t.....%i.%s\n" i i (pp_inductive ind);
+	  Some ind
+      with 
+	| Not_found | No_value ->
+	    if debug then print_debug "SL_GRAPH_DOMAIN:get_inductive %i t.....None\n" i;
+	    None
+
+    let has_edge: int -> offset -> t -> bool = fun i o t ->
+      let b = 
+	try OffsetMap.mem o (IntMap.find i t.nodes).edges 
+	with | Not_found -> false in
+	if debug && b then print_debug "SL_GRAPH_DOMAIN:has_edge %i %s t.....Yes\n" i (pp_offset o);
+	if debug && not b then print_debug "SL_GRAPH_DOMAIN:has_edge %i %s t.....No\n" i (pp_offset o);
+	b
+
+    let has_inductive: int -> t -> bool = fun i t ->
+      let b = try has (IntMap.find i t.nodes).inductive with | Not_found -> false in
+	if debug && b then print_debug "SL_GRAPH_DOMAIN:has_inductive %i t.....Yes\n" i;
+	if debug && not b then print_debug "SL_GRAPH_DOMAIN:has_inductive %i t.....No\n" i;
+	b
+	      
+    let find: int -> offset -> t -> (offset * int) list = fun i o t ->
+      if debug then print_debug "SL_GRAPH_DOMAIN: finding edges from Node(%i)%s...\n" i (pp_offset o);
+      try 
+	let n = IntMap.find i t.nodes 
+	and ffold: offset -> int -> (offset * int) list -> (offset * int) list = fun oo j l ->
+	  try ((replaceOffset oo o Zero), j)::l with | Offset_error _ -> l in  
+	  OffsetMap.fold ffold n.edges []
+      with 
+	 | Not_found -> []
+
     (* fusion i j deletes i *)
     let fusion: int -> int -> t -> t = fun i j t ->
       if debug then print_debug "SL_TL_GRAPH_DOMAIN:fusion_node %i %i t\n" i j;
@@ -123,11 +167,12 @@ module SL_GRAPH_DOMAIN =
 		next  = if t.next==i+1 then i else t.next;}
 
   
-    let is_reached_by_edge: int -> (offset -> bool) -> t -> int list = fun i p t -> []
-    let is_reached_by_inductive: int -> (inductive -> bool) -> t -> int list = fun i p t -> []
+    let is_reached_by_edge: int -> (int -> offset -> bool) -> t -> int list = fun i p t -> []
+
+    let is_reached_by_inductive: int -> (int -> inductive -> bool) -> t -> int list = fun i p t -> []
 
     let is_reached: int -> t -> int list = fun i t ->
-      List.append (is_reached_by_edge i (fun _-> true) t) (is_reached_by_inductive i (fun _-> true) t)	
+      List.append (is_reached_by_edge i (fun _ _ -> true) t) (is_reached_by_inductive i (fun _ _ -> true) t)	
 
 
     (* may contains duplicates *)

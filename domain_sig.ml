@@ -35,10 +35,18 @@ module type SL_GRAPH_DOMAIN =
     val remove_inductive: int -> t -> t
     val update_inductive: int -> inductive -> t -> t
 
+    val get_edge: int -> offset -> t -> int option
+    val get_inductive: int -> t -> inductive option
+
+    val has_edge: int -> offset -> t -> bool
+    val has_inductive: int -> t -> bool
+
+    val find: int -> offset -> t -> (offset * int) list
+
     val fusion: int -> int -> t -> t
 
-    val is_reached_by_edge: int -> (offset -> bool) -> t -> int list
-    val is_reached_by_inductive: int -> (inductive -> bool) -> t -> int list 
+    val is_reached_by_edge: int -> (int -> offset -> bool) -> t -> int list
+    val is_reached_by_inductive: int -> (int -> inductive -> bool) -> t -> int list 
     val is_reached: int -> t -> int list
 
     val domain: t -> int list
@@ -76,8 +84,8 @@ module type SL_DOMAIN =
 
     val malloc: offset list -> t -> t* int
 
-    val canonicalize: t -> t 
-    val find: t -> int -> offset -> offseted_node list
+    val canonicalize: t -> t     
+    val find: int -> offset -> t -> (offset * int) list
     val deffer: t -> int -> offset -> int 
   end
 
