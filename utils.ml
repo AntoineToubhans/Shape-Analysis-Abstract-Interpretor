@@ -25,6 +25,13 @@ let map_default: ('a -> 'b) -> 'b -> 'a option -> 'b = fun f b ->
 exception Top
 exception Bottom
 
+let maxlist l = 
+  let rec ml l acc = 
+    match l with | [] -> acc | a::l -> ml l (max a acc) in ml l 0
+
+let pp_list l = 
+  let rec pp_nl l s = match l with | []->s |i::l-> pp_nl l (Printf.sprintf "%s, %i" s i) in
+    match l with |[]-> "" |a::l-> pp_nl l (Printf.sprintf "%i" a)
 
 
 (* assume the list is sorted *)

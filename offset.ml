@@ -13,13 +13,13 @@ let rec equals(o1: offset)(o2: offset) =
     | ArrayRange(i1, o1), ArrayRange(i2, o2) -> i1==i2 && equals o1 o2
     | _, _ -> false
 
-let rec offset2str(o: offset)=
+let rec pp_offset(o: offset)=
   match o with
     | Zero -> ""
     | RecordField(s, o)-> 
-        Printf.sprintf "%s@%s" (offset2str o) s
+        Printf.sprintf "%s@%s" (pp_offset o) s
     | ArrayRange(i, o)->
-        Printf.sprintf "%s+%i" (offset2str o) i
+        Printf.sprintf "%s+%i" (pp_offset o) i
 
 (* this deals with inclusion of offset           *)
 (* s.t. +3 is included in +3@n or +3+2@n@q       *)
@@ -62,8 +62,8 @@ let replaceOffset(o: offset)(o1: offset)(o2: offset) =
     offset_error 
       (Printf.sprintf 
         "replacing offset failure: %s is not smaller than %s" 
-        (offset2str a) 
-        (offset2str b)) in
+        (pp_offset a) 
+        (pp_offset b)) in
   let rec aux a b = 
     match a, b with 
       | Zero, _ -> b
@@ -85,7 +85,7 @@ let rec appendOffset(o: offset) (o2: offset) =
         ArrayRange(i, appendOffset o o2)
 
 (* !!!! to DO !!! *)
-let cmp_offset o1 o2 = String.compare (offset2str o1) (offset2str o2) 
+let cmp_offset o1 o2 = String.compare (pp_offset o1) (pp_offset o2) 
 
 module OffsetOrd = 
   struct 

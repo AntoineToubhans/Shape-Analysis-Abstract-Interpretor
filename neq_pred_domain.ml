@@ -17,6 +17,12 @@ module NEQ_Domain =
     (* basic constructors *)
     let empty:t = {neq=[]; eq=[]; lives=[];}
 
+    let is_top: t -> bool = fun t ->
+      t.neq==[] && t.eq==[] 
+
+    let is_bottom: t -> bool = fun t ->
+      List.exists (fun (x, y) -> x==y) t.neq
+
     let is_live: int -> t -> bool = 
       fun n t -> List.mem n t.lives
  

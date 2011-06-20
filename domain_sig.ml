@@ -6,25 +6,40 @@ open Utils
 
 exception Request_unfolding of int
 exception Can_not_defferentiate
+ 
+type inductive = 
+    { target: int;
+      source_parameters: int list;
+      target_parameters: int list;
+      length: int option;}
 
+let pp_inductive: inductive -> string = fun ind ->
+  Printf.sprintf "(%s) *== %i(%s)" (pp_list ind.source_parameters) ind.target (pp_list ind.target_parameters)
+
+let get_domain_inductive: inductive -> int list = fun ind ->
+  ind.target::(List.append ind.source_parameters ind.target_parameters)
+
+     
 module type SL_GRAPH_DOMAIN =
-  sig  
-    val domainId : int   
+  sig      
     type t
 
+    val empty: t
+      
     val add_edge: int -> offset -> int -> t -> t
     val remove_edge: int -> offset -> t -> t
       (* update i o j t <=> add i o j (remove i o t) *)
     val update_edge: int -> offset -> int -> t -> t
 
-    val add_inductive: int -> (int list) -> int -> t -> t
+    val add_inductive: int -> inductive -> t -> t
     val remove_inductive: int -> t -> t
+    val update_inductive: int -> inductive -> t -> t
 
     val fusion: int -> int -> t -> t
 
+    val is_reached_by_edge: int -> (offset -> bool) -> t -> int list
+    val is_reached_by_inductive: int -> (inductive -> bool) -> t -> int list 
     val is_reached: int -> t -> int list
-    val is_reached_by_edge: int -> (offset -> bool) -> int list
-    val is_reached_by_inductive: int -> (int list -> bool) -> int list 
 
     val domain: t -> int list
     val pp: t -> string
@@ -33,6 +48,10 @@ module type SL_GRAPH_DOMAIN =
 module type PRED_DOMAIN = 
   sig
     type t
+
+    val empty: t
+    val is_top: t -> bool
+    val is_bottom: t -> bool
 
     val is_live: int -> t -> bool
 
@@ -53,6 +72,8 @@ module type SL_DOMAIN =
     val domainId : int   
     type t
 
+    val fusion: int -> int -> t -> t 
+
     val malloc: offset list -> t -> t* int
 
     val canonicalize: t -> t 
@@ -66,12 +87,13 @@ module type DOMAIN =
   
     type t   
 
-    val empty: t        
- 
-   val deffer: t-> offseted_node -> offseted_node
-    (* Mutation of the content of a cell *)
+    val top: t        
+    val bottom: t
+
+    val deffer: t-> offseted_node -> offseted_node
+      (* Mutation of the content of a cell *)
     val mutation: t -> offseted_node -> offseted_node -> t 
-    
+      
     val pp: t -> string
 
   end 
