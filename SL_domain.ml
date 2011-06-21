@@ -155,7 +155,7 @@ module MAKE_SL_DOMAIN =
        let deffer: t -> int -> offset -> int = fun t i o -> i 
 
        (* attempt to fold at node i: produces either     *)
-       (*  - Some t   if attemps was succesfull          *)
+       (*  - Some t   if attemps was successful          *)
        (*  - none   if it can not be fold for any reason *)
        let fold: int -> t -> t option = fun i (g, p) -> 
 	 if debug then print_debug "SL_DOMAIN: try to fold at %i t\n" i;
@@ -163,10 +163,9 @@ module MAKE_SL_DOMAIN =
 	   let pt_parameters = 
 	     List.map (fun o -> get (G.get_edge i o g)) D.def_points_to_parameters
 	   and pt_fresh = 
-	     List.map (fun o -> get (G.get_edge i o g)) D.def_points_to_fresh
-	   and j = get (G.get_edge i (List.hd D.def_points_to_fresh) g) in
+	     List.map (fun o -> get (G.get_edge i o g)) D.def_points_to_fresh in
 	   let ind =
-	     { target = j;
+	     { target = List.hd pt_fresh;
 	       source_parameters = pt_parameters;
 	       target_parameters = D.new_parameters i pt_parameters pt_fresh;
 	       length = 1;} in
@@ -174,9 +173,12 @@ module MAKE_SL_DOMAIN =
 	     List.fold_left (fun g o -> G.remove_edge i o g) g D.def_points_to_parameters in
 	   let g = 
 	     List.fold_left (fun g o -> G.remove_edge i o g) g D.def_points_to_fresh in
-	     Some(G.add_inductive i ind g, p)
+	   let g = G.add_inductive i ind g in
+	     if debug then print_debug "SL_DOMAIN: successful folding at node %i\n" i;
+	     Some(g, p)
 	 with 
 	   | _ -> 
+	       if debug then print_debug "SL_DOMAIN: fail to fold at node %i\n" i;
 	       None
 
        let canonicalize: t -> t = fun t -> t
