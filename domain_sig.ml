@@ -40,6 +40,8 @@ module type SL_GRAPH_DOMAIN =
 
     val empty: t
       
+    val is_node_empty: int -> t -> bool
+
     val add_edge: int -> offset -> int -> t -> t
     val remove_edge: int -> offset -> t -> t
       (* update i o j t <=> add i o j (remove i o t) *)
@@ -76,6 +78,8 @@ module type PRED_DOMAIN =
 
     val empty: t
     val is_top: t -> bool
+    (* under-approximation of bottom *)
+    (*      is_bottom t => t=_|_     *)
     val is_bottom: t -> bool
     val check_bottom: t -> t
 
@@ -105,11 +109,10 @@ module type INDUCTIVE_DEF =
 
     val domain_offset: offset array
 
-    val def_points_to_fresh: offset list
+    (* length = number_of_fresh *)
+    val def_points_to_fresh: offset list  
+    (* length = number_of_parameters *)
     val def_points_to_parameters: offset list
-
-    (* always the first fresh *)
-    val induct_offset: offset
 
     (* current node -> parameters -> fresh *)
     val new_parameters: int -> int list -> int list -> int list
@@ -128,6 +131,10 @@ module type SL_DOMAIN =
     val fusion: int -> int -> t -> t 
     val reduce_egalities: t -> t
 
+    (* under-approximation of bottom *)
+    (*      is_bottom t => t=_|_     *)
+    val is_bottom: t -> bool
+
     val malloc: offset list -> t -> int*t
 
     val break_inductive_forward: int -> t -> t*t
@@ -137,7 +144,7 @@ module type SL_DOMAIN =
     val find: int -> offset -> t -> (offset * int) list
     val deffer: t -> int -> offset -> int 
 
-    val fold: int -> t -> t
+    val fold: int -> t -> t option
     val canonicalize: t -> t  
 
     val mutation: int -> int -> t -> t

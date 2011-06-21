@@ -25,10 +25,17 @@ module SL_GRAPH_DOMAIN =
        { nodes = IntMap.empty;
 	 next = 1;}
 
+     let is_node_empty: int -> t -> bool = fun i t ->
+       try
+	 let n = IntMap.find i t.nodes in
+	   n.inductive==None && OffsetMap.is_empty n.edges
+       with
+	 | Not_found -> true
+
      let add_edge: int -> offset -> int -> t -> t = fun i o j t ->   
        if debug then print_debug "SL_GRAPH_DOMAIN:add_edge %i %s %i t\n" i (pp_offset o) j;
        try
-	 let n = IntMap.find i t.nodes in
+	 let n = IntMap.find i t.nodes in 
 	   if OffsetMap.mem o n.edges then error 
 	     (Printf.sprintf "Separation issue: %i%s already set" i (pp_offset o));
 	   { nodes = IntMap.add i {n with edges = OffsetMap.add o j n.edges} t.nodes;
@@ -226,7 +233,7 @@ module SL_GRAPH_DOMAIN =
 	   (fun ind -> Printf.sprintf "%s %s\n" s (pp_inductive ind)) s n.inductive
 	      
      let pp: t -> string = fun t ->
-       let s = Printf.sprintf "---Print SL_GRAPH_DOMAIN---\nNext free node:%i\n" t.next in
+       let s = Printf.sprintf "     ---Print SL_GRAPH_DOMAIN---\nNext free node:%i\n" t.next in
 	 IntMap.fold (fun i n s -> Printf.sprintf "%s%s" s (pp_node i n)) t.nodes s
 
    end: SL_GRAPH_DOMAIN)

@@ -26,6 +26,7 @@ module MAKE_SL_DOMAIN =
     	
        let fusion: int -> int -> t -> t = fun i j (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: fusion %i %i t\n" i j;
+	 if (i==0 && not (G.is_node_empty j g))||(j==0 && not(G.is_node_empty i g)) then raise Bottom; 
 	 if i==j then 
 	   (g, p) 
 	 else if not (P.is_live i p) then
@@ -43,6 +44,8 @@ module MAKE_SL_DOMAIN =
 	   if debug then print_debug "SL_DOMAIN: egalities reduced...\n";
 	   (g, p)
       
+       let is_bottom: t -> bool = fun t -> false
+
        let malloc: offset list -> t -> int*t = fun ol (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: malloc %s...\n" 
 	   (List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol);
@@ -142,13 +145,36 @@ module MAKE_SL_DOMAIN =
        let find: int -> offset -> t -> (offset * int) list = fun i o t -> []
        let deffer: t -> int -> offset -> int = fun t i o -> i 
 
-       let fold: int -> t -> t = fun i t -> t	   
+       (* attempt to fold at node i: produces either     *)
+       (*  - Some t   if attemps was succesfull          *)
+       (*  - none   if it can not be fold for any reason *)
+       let fold: int -> t -> t option = fun i (g, p) -> 
+	 try
+	   let pt_parameters = 
+	     List.map (fun o -> get (G.get_edge i o g)) D.def_points_to_parameters
+	   and pt_fresh = 
+	     List.map (fun o -> get (G.get_edge i o g)) D.def_points_to_fresh
+	   and j = get (G.get_edge i (List.hd D.def_points_to_fresh) g) in
+	   let ind =
+	     { target = j;
+	       source_parameters = pt_parameters;
+	       target_parameters = D.new_parameters i pt_parameters pt_fresh;
+	       length = 1;} in
+	   let g = 
+	     List.fold_left (fun g o -> G.remove_edge i o g) g D.def_points_to_parameters in
+	   let g = 
+	     List.fold_left (fun g o -> G.remove_edge i o g) g D.def_points_to_fresh in
+	     Some(G.add_inductive i ind g, p)
+	 with 
+	   | _ -> 
+	       None
+
        let canonicalize: t -> t = fun t -> t
 
        let mutation: int -> int -> t -> t = fun i j t -> t
 
        let pp: t -> string = fun (g, p) -> 
-	 Printf.sprintf "-----Print SL_DOMAIN ------\n%s%s" (P.pp p) (G.pp g)
+	 Printf.sprintf "***-------Print SL_DOMAIN --------***\n%s%s" (P.pp p) (G.pp g)
 	   
      end: SL_DOMAIN)
 
@@ -158,8 +184,11 @@ module A = MAKE_SL_DOMAIN(TList)
 module B = MAKE_SL_DOMAIN(DLList)
 
 let _, t = B.malloc [Zero] B.empty
-let _, t = B.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
+let i, t = B.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
+let t1 = get (B.fold i t)
+let t2 = B.unfold i t1
 
 let _ = 
-  Printf.printf "%s" (B.pp t)
-
+  Printf.printf "%s" (B.pp t);
+  Printf.printf "%s" (B.pp t1);
+  Printf.printf "%s" (B.pp t2)

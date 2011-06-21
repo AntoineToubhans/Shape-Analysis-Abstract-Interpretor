@@ -30,8 +30,6 @@ module TList =
      let def_points_to_parameters: offset list = 
        [RecordField("top", Zero)]
 
-     let induct_offset: offset = RecordField("next", Zero) 
-
      (* current node -> parameters -> fresh *)
      let new_parameters: int -> int list -> int list -> int list = fun i l p -> l
 
@@ -58,8 +56,6 @@ module DLList =
 
      let def_points_to_parameters: offset list = 
        [RecordField("prev", Zero)]
-
-     let induct_offset: offset = RecordField("next", Zero) 
 
      (* current node -> parameters -> fresh *)
      let new_parameters: int -> int list -> int list -> int list = fun i l p -> [i]

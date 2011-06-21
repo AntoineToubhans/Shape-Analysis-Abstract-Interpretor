@@ -67,7 +67,7 @@ module NEQ_DOMAIN =
 
     let pp: t -> string = fun t ->
       let s = List.fold_left 
-	(fun s (i, j) -> Printf.sprintf "%s%i <> %i\n" s i j) "---Print NEQ_PRED_DOMAIN---\n" t.neq in
+	(fun s (i, j) -> Printf.sprintf "%s%i <> %i\n" s i j) "     ---Print NEQ_PRED_DOMAIN---\n" t.neq in
 	List.fold_left 
 	  (fun s (i, j) -> Printf.sprintf "%s%i == %i\n" s i j) s t.eq 
 	
