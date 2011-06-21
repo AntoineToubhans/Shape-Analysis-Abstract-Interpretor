@@ -3,6 +3,7 @@ open Utils
 open Domain_sig
 open Neq_pred_domain
 open SL_graph_domain
+open Inductive_def
 
 (* =========================================================== *)
 (* Module SL_Domain                                            *)
@@ -120,6 +121,8 @@ module MAKE_SL_DOMAIN =
 	   
      end: SL_DOMAIN)
 
+
+(*
 module A = 
   (struct
      let number_of_parameters: int = 1;
@@ -132,3 +135,4 @@ let _, t = B.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordF
 
 let _ = 
   Printf.printf "%s" (B.pp t)
+*)

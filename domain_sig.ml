@@ -98,6 +98,16 @@ module type INDUCTIVE_DEF =
 
     val number_of_parameters: int
 
+    val number_of_fresh: int
+
+    val def_points_to_fresh: offset list
+    val def_points_to_parameters: offset list
+
+    val induct_offset: offset
+
+    (* current node -> parameters -> fresh *)
+    val new_parameters: int -> int list -> int list -> int list
+
   end
 
 module type SL_DOMAIN = 
