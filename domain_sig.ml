@@ -144,7 +144,8 @@ module type SL_DOMAIN =
     val find: int -> offset -> t -> (offset * int) list
     val deffer: t -> int -> offset -> int 
 
-    val fold: int -> t -> t option
+    val try_fold: int -> t -> t option
+    val try_modus_ponens: int -> t -> t option
     val canonicalize: t -> t  
 
     val mutation: int -> int -> t -> t

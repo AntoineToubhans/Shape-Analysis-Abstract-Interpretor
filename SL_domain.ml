@@ -49,6 +49,9 @@ module MAKE_SL_DOMAIN =
 	   if debug then print_debug "SL_DOMAIN: egalities reduced...\n";
 	   !rg, !rp
       
+       (* So far, is_bottom checks:    *)
+       (*  -     *)
+       (*  -     *)
        let is_bottom: t -> bool = fun t -> false
 
        let malloc: offset list -> t -> int*t = fun ol (g, p) ->
@@ -157,7 +160,7 @@ module MAKE_SL_DOMAIN =
        (* attempt to fold at node i: produces either     *)
        (*  - Some t   if attemps was successful          *)
        (*  - none   if it can not be fold for any reason *)
-       let fold: int -> t -> t option = fun i (g, p) -> 
+       let try_fold: int -> t -> t option = fun i (g, p) -> 
 	 if debug then print_debug "SL_DOMAIN: try to fold at %i t\n" i;
 	 try
 	   let pt_parameters = 
@@ -181,6 +184,8 @@ module MAKE_SL_DOMAIN =
 	       if debug then print_debug "SL_DOMAIN: fail to fold at node %i\n" i;
 	       None
 
+       let try_modus_ponens: int -> t -> t option = fun i (g, p) -> None
+
        let canonicalize: t -> t = fun t -> t
 
        let mutation: int -> int -> t -> t = fun i j t -> t
@@ -199,13 +204,11 @@ module B = MAKE_SL_DOMAIN(DLList)
 
 let _, t = B.malloc [Zero] B.empty
 let i, t = B.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
-let t1 = get (B.fold i t)
-let t2 = B.unfold i t1
-let t3 = B.reduce_equalities t2
+let t1 = get (B.try_fold i t)
+let t1 = B.unfold i t1
+let t1 = B.reduce_equalities t1
 
 let _ = 
   Printf.printf "%s" (B.pp t);
-  Printf.printf "%s" (B.pp t1);
-  Printf.printf "%s" (B.pp t2);
-  Printf.printf "%s" (B.pp t3)
+  Printf.printf "%s" (B.pp t1)
 
