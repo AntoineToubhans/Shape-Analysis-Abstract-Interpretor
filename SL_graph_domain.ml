@@ -84,9 +84,15 @@ module SL_GRAPH_DOMAIN =
       add_inductive i ind (remove_inductive i t)
 
 
-    let create_fresh_node: t -> (int* t) = fun t ->
-      if debug then print_debug "SL_GRAPH_DOMAIN: create_fresh_node.....%i\n" t.next;
+    let create_fresh_node: t -> int* t = fun t ->
+      if debug then print_debug "SL_GRAPH_DOMAIN: create_fresh_node...%i\n" t.next;
       t.next, {t with next = t.next + 1}
+
+    let create_n_fresh_nodes: int -> t -> int list* t = fun n t ->
+      if debug then print_debug "SL_GRAPH_DOMAIN: create_n_fresh_nodes %i...[%i,...,%i]\n" n t.next (t.next+n-1);
+      let l = ref [] in 
+	for i=t.next to t.next+n-1 do l:=i::(!l) done;
+	!l, {t with next = t.next + n}
 
     let get_edge: int -> offset -> t -> int option = fun i o t ->
       try 

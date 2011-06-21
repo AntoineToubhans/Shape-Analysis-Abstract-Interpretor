@@ -4,14 +4,25 @@
 open Offset
 open Utils
 
-exception Request_unfolding of int
-exception Can_not_defferentiate
+(* request to split an inductive *)
+(*      Split true, i :          *)
+(* i ===_===> j                  *)
+(*      -> fusion i j            *)
+(*      -> i===1===> k===_===> j *)
+(*      Split true, i :          *)
+(* i ===_===> j                  *)
+(*      -> fusion i j            *)
+(*      -> i===_===> k===1===> j *)
+exception Split of bool*int
  
 type inductive = 
     { target: int;
       source_parameters: int list;
       target_parameters: int list;
-      length: int option;}
+      (* length is optional,                                    *)
+      (* 0 means we don't know how long is the sequence         *)
+      (* 0 long sequence are forbidden, and immediately reduced *)
+      length: int;}
 
 let pp_inductive: inductive -> string = fun ind ->
   Printf.sprintf "(%s) *== %i(%s)" (pp_list ind.source_parameters) ind.target (pp_list ind.target_parameters)
@@ -36,6 +47,7 @@ module type SL_GRAPH_DOMAIN =
     val update_inductive: int -> inductive -> t -> t
 
     val create_fresh_node: t -> int* t
+    val create_n_fresh_nodes: int -> t -> int list*t
 
     val get_edge: int -> offset -> t -> int option
     val get_inductive: int -> t -> inductive option
@@ -81,10 +93,18 @@ module type PRED_DOMAIN =
     val pp: t -> string
   end
 
+module type INDUCTIVE_DEF = 
+  sig
+
+    val number_of_parameters: int
+
+  end
+
 module type SL_DOMAIN = 
   sig
     module G: SL_GRAPH_DOMAIN
     module P: PRED_DOMAIN
+    module D: INDUCTIVE_DEF
 
     type t
     val empty: t
@@ -94,12 +114,13 @@ module type SL_DOMAIN =
 
     val malloc: offset list -> t -> int*t
 
-    val break_inductive_backward: int -> int -> t -> t list
-    val break_inductive_forward: int -> int -> t -> t list
+    val break_inductive_forward: int -> t -> t*t
+    val break_inductive_backward: int -> t -> t*t
 
-    val unfold: int -> t -> t list
+    val unfold: int -> t -> t 
 
-    val canonicalize: t -> t     
+    val canonicalize: t -> t  
+   
     val find: int -> offset -> t -> (offset * int) list
     val deffer: t -> int -> offset -> int 
 

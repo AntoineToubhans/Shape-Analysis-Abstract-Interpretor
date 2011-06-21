@@ -6,7 +6,7 @@ open Domain_sig
 (* =========================================================== *)
 (*                                  Last modified: AT 06/18/11 *)
 
-module NEQ_Domain = 
+module NEQ_DOMAIN = 
   (struct
     
     type t = 
@@ -15,7 +15,7 @@ module NEQ_Domain =
 	  lives  : int list;}
 
     (* basic constructors *)
-    let empty:t = {neq=[]; eq=[]; lives=[];}
+    let empty:t = {neq=[]; eq=[]; lives=[0];}
 
     let is_top: t -> bool = fun t ->
       t.neq==[] && t.eq==[] 
