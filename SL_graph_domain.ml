@@ -230,7 +230,7 @@ module SL_GRAPH_DOMAIN =
        let f = fun o j s -> Printf.sprintf "%s %i%s|---> %i\n" s i (pp_offset o) j in
        let s = OffsetMap.fold f n.edges s in 
 	 map_default
-	   (fun ind -> Printf.sprintf "%s %s\n" s (pp_inductive ind)) s n.inductive
+	   (fun ind -> Printf.sprintf "%s %i.%s\n" s i (pp_inductive ind)) s n.inductive
 	      
      let pp: t -> string = fun t ->
        let s = Printf.sprintf "     ---Print SL_GRAPH_DOMAIN---\nNext free node:%i\n" t.next in

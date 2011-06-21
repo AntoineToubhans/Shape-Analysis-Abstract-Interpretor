@@ -16,9 +16,9 @@ open Domain_sig
 (* =========================================================== *)
 module TList =  
   (struct
+     let name = "Topped List"
 
      let number_of_parameters: int = 1
-
      let number_of_fresh: int = 2
 
      let domain_offset: offset array = 
@@ -43,9 +43,9 @@ module TList =
 (* =========================================================== *)
 module DLList =  
   (struct
+     let name = "Doubly Linked List"
 
      let number_of_parameters: int = 1
-
      let number_of_fresh: int = 2
 
      let domain_offset: offset array = 

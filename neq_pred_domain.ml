@@ -32,8 +32,8 @@ module NEQ_DOMAIN =
     let are_not_equal: int -> int -> t -> bool =
       fun i j t -> List.mem (i, j) t.neq || List.mem (j, i) t.neq 
  
-    let pop_equality: t -> (int*int) option = 
-      fun t -> match t.eq with | [] -> None | e::_ -> Some e
+    let pop_equality: t ref -> (int*int) option = 
+      fun t -> match (!t).eq with | [] -> None | e::tl -> t:={!t with eq = tl}; Some e
 
     let add_neq: int -> int -> t -> t = fun i j t -> 
       if debug then print_debug "NEQ_DOMAIN: add_neq %i %i t\n" i j;

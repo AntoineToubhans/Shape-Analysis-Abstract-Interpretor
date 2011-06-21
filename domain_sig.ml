@@ -25,7 +25,7 @@ type inductive =
       length: int;}
 
 let pp_inductive: inductive -> string = fun ind ->
-  Printf.sprintf "(%s) *=%s= %i(%s)" 
+  Printf.sprintf "ind(%s) *=%s= %i.ind(%s)" 
     (pp_list ind.source_parameters) 
     (if ind.length==0 then "_" else (Printf.sprintf "%i" ind.length)) 
     ind.target (pp_list ind.target_parameters)
@@ -87,7 +87,7 @@ module type PRED_DOMAIN =
     val are_not_equal: int -> int -> t -> bool
 
     (* usefull to perform egalities reduction in SL_DOMAIN *)
-    val pop_equality: t -> (int*int) option
+    val pop_equality: t ref -> (int*int) option
 
     val add_neq: int -> int -> t -> t
     val add_eq: int -> int -> t -> t 
@@ -102,9 +102,9 @@ module type PRED_DOMAIN =
 
 module type INDUCTIVE_DEF = 
   sig
+    val name: string
 
     val number_of_parameters: int
-
     val number_of_fresh: int
 
     val domain_offset: offset array
@@ -129,7 +129,7 @@ module type SL_DOMAIN =
     val empty: t
 
     val fusion: int -> int -> t -> t 
-    val reduce_egalities: t -> t
+    val reduce_equalities: t -> t
 
     (* under-approximation of bottom *)
     (*      is_bottom t => t=_|_     *)

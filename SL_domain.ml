@@ -36,18 +36,23 @@ module MAKE_SL_DOMAIN =
 	 else
 	   raise Bottom
 	     
-       let rec reduce_egalities: t -> t = fun (g, p) ->
-	 try
-	   let i, j = get (P.pop_equality p) in
-	     reduce_egalities (fusion i j (g, p))
-	 with | No_value -> 
+       let rec reduce_equalities: t -> t = fun (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: reduce_equalities t...\n";
+	 let rg = ref g and rp = ref p in
+	 let eq = ref (P.pop_equality rp) in
+	   while has !eq do
+	     let i, j = get !eq in
+	     let t = fusion i j (!rg, !rp) in
+	       rg:= fst t; rp:= snd t;
+	       eq:= P.pop_equality rp
+	   done;
 	   if debug then print_debug "SL_DOMAIN: egalities reduced...\n";
-	   (g, p)
+	   !rg, !rp
       
        let is_bottom: t -> bool = fun t -> false
 
        let malloc: offset list -> t -> int*t = fun ol (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: malloc %s...\n" 
+	 if debug then print_debug "SL_DOMAIN: malloc (%s)...\n" 
 	   (List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol);
 	 let i, g = G.create_fresh_node g in
 	 let g = List.fold_left (fun g o -> G.add_edge i o 0 g) g ol in 
@@ -56,6 +61,7 @@ module MAKE_SL_DOMAIN =
 	     
 
        let nullify_inductive: int -> t -> t = fun i (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: nullify_inductive %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
 	   let p = 
@@ -70,6 +76,7 @@ module MAKE_SL_DOMAIN =
 	       error (Printf.sprintf "can not nullify inductive from %i: ill-formed inductive" i)
 		 
        let break_inductive_forward: int -> t -> t*t = fun i (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: break_inductive_forward %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
 	     if ind.length!=0 then raise No_value;
@@ -92,6 +99,7 @@ module MAKE_SL_DOMAIN =
 	       error (Printf.sprintf "can not break inductive from %i: there's no inductive with no length" i)
 
        let break_inductive_backward: int -> t -> t*t = fun i (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: break_inductive_backward %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
 	     if ind.length!=0 then raise No_value;
@@ -117,6 +125,7 @@ module MAKE_SL_DOMAIN =
        (* raise Split of sequence of unknown length *)
        (* fail if it can not unfold                 *)
        let unfold: int -> t -> t = fun i (g, p) -> 
+	 if debug then print_debug "SL_DOMAIN: unfold %i t\n" i;
  	 try
 	   let ind = get (G.get_inductive i g) in
 	     if ind.length==0 then raise (Split (true, i));
@@ -149,6 +158,7 @@ module MAKE_SL_DOMAIN =
        (*  - Some t   if attemps was succesfull          *)
        (*  - none   if it can not be fold for any reason *)
        let fold: int -> t -> t option = fun i (g, p) -> 
+	 if debug then print_debug "SL_DOMAIN: try to fold at %i t\n" i;
 	 try
 	   let pt_parameters = 
 	     List.map (fun o -> get (G.get_edge i o g)) D.def_points_to_parameters
@@ -174,7 +184,9 @@ module MAKE_SL_DOMAIN =
        let mutation: int -> int -> t -> t = fun i j t -> t
 
        let pp: t -> string = fun (g, p) -> 
-	 Printf.sprintf "***-------Print SL_DOMAIN --------***\n%s%s" (P.pp p) (G.pp g)
+	 Printf.sprintf 
+	   "***-------Print SL_DOMAIN --------***\n*** with inductive: %s ***\n%s%s" 
+	   D.name (P.pp p) (G.pp g)
 	   
      end: SL_DOMAIN)
 
@@ -187,8 +199,11 @@ let _, t = B.malloc [Zero] B.empty
 let i, t = B.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
 let t1 = get (B.fold i t)
 let t2 = B.unfold i t1
+let t3 = B.reduce_equalities t2
 
 let _ = 
   Printf.printf "%s" (B.pp t);
   Printf.printf "%s" (B.pp t1);
-  Printf.printf "%s" (B.pp t2)
+  Printf.printf "%s" (B.pp t2);
+  Printf.printf "%s" (B.pp t3)
+
