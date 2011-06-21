@@ -63,7 +63,7 @@ module type SL_GRAPH_DOMAIN =
     val is_reached_by_inductive: int -> (int -> inductive -> bool) -> t -> int list 
     val is_reached: int -> (int -> bool) -> t -> int list
 
-    val domain: t -> int list
+    val domain: t -> IntSet.t
     val pp: t -> string
   end
 
@@ -123,6 +123,8 @@ module type SL_DOMAIN =
    
     val find: int -> offset -> t -> (offset * int) list
     val deffer: t -> int -> offset -> int 
+
+    val mutation: int -> int -> t -> t
 
     val pp: t -> string
   end

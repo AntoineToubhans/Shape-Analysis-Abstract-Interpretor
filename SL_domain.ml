@@ -47,7 +47,7 @@ module MAKE_SL_DOMAIN =
 	   (List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol);
 	 let i, g = G.create_fresh_node g in
 	 let g = List.fold_left (fun g o -> G.add_edge i o 0 g) g ol in 
-	 let p = List.fold_left (fun p j -> if j!=i then P.add_neq i j p else p) p (G.domain g) in
+	 let p = IntSet.fold (fun j p -> if j!=i then P.add_neq i j p else p) (G.domain g) p in
 	   i, (g, p)
 	     
        let break_inductive_forward: int -> t -> t*t = fun i (g, p) ->
@@ -113,6 +113,8 @@ module MAKE_SL_DOMAIN =
        let find: int -> offset -> t -> (offset * int) list = fun i o t -> []
        let deffer: t -> int -> offset -> int = fun t i o -> i 
 	   
+       let mutation: int -> int -> t -> t = fun i j t -> t
+
        let pp: t -> string = fun (g, p) -> 
 	 Printf.sprintf "-----Print SL_DOMAIN ------\n%s%s" (P.pp p) (G.pp g)
 	   
@@ -125,5 +127,8 @@ module A =
 
 module B = MAKE_SL_DOMAIN(A)
 
+let _, t = B.malloc [Zero] B.empty
+let _, t = B.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
+
 let _ = 
-  Printf.printf "%s" (B.pp B.empty)
+  Printf.printf "%s" (B.pp t)

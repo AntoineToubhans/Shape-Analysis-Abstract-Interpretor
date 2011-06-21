@@ -202,16 +202,21 @@ module SL_GRAPH_DOMAIN =
 
 
     (* may contains duplicates *)
-    let domain: t -> int list = fun t ->
-      let ffold o j l = 
+    let domain: t -> IntSet.t = fun t ->
+      let add j dom = 
 	if j>=t.next then error 
 	  (Printf.sprintf "Domain issue: contains %i which's bigger then t.next: %i" j t.next);
-	j::l in 
-      let fffold i n l =
-	let l = i::(OffsetMap.fold ffold n.edges l) in
-	  map_default (fun ind->ind.target::(List.append (get_domain_inductive ind) l)) l n.inductive
+	IntSet.add j dom in
+      let fffold i n dom =
+	let dom = add i (OffsetMap.fold (fun o -> add) n.edges dom) in
+	  map_default 
+	    (fun ind->
+	       List.fold_left (fun dom i -> add i dom)
+		 (List.fold_left (fun dom i -> add i dom) (IntSet.add ind.target dom) ind.source_parameters)
+		 ind.target_parameters) 
+	    dom n.inductive
       in
-	IntMap.fold fffold t.nodes []
+	IntMap.fold fffold t.nodes IntSet.empty
 	  
      let pp_node: int -> node -> string = fun i n ->
        let s = Printf.sprintf "Node(%i):\n========\n" i in
