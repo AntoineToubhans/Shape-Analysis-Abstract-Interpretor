@@ -100,6 +100,8 @@ module type INDUCTIVE_DEF =
 
     val number_of_fresh: int
 
+    val domain_offset: offset array
+
     val def_points_to_fresh: offset list
     val def_points_to_parameters: offset list
 

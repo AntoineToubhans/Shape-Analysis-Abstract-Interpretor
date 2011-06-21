@@ -122,17 +122,13 @@ module MAKE_SL_DOMAIN =
      end: SL_DOMAIN)
 
 
-(*
-module A = 
-  (struct
-     let number_of_parameters: int = 1;
-   end: INDUCTIVE_DEF)
 
-module B = MAKE_SL_DOMAIN(A)
+module A = MAKE_SL_DOMAIN(TList)
+module B = MAKE_SL_DOMAIN(DLList)
 
 let _, t = B.malloc [Zero] B.empty
 let _, t = B.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
 
 let _ = 
   Printf.printf "%s" (B.pp t)
-*)
+

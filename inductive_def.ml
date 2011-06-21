@@ -14,12 +14,15 @@ open Domain_sig
 (*   a.tl(d) := { a==0 | emp }                                 *)
 (*              { a!=0 | a@n->b * a@p-> c * a@t->d * b.tl(d) } *)
 (* =========================================================== *)
-module Top_List =  
+module TList =  
   (struct
 
      let number_of_parameters: int = 1
 
      let number_of_fresh: int = 2
+
+     let domain_offset: offset array = 
+       [|RecordField("next", Zero); RecordField("prev", Zero); RecordField("top", Zero)|]
 
      let def_points_to_fresh: offset list = 
        [RecordField("next", Zero); RecordField("prev", Zero)]
@@ -46,6 +49,9 @@ module DLList =
      let number_of_parameters: int = 1
 
      let number_of_fresh: int = 2
+
+     let domain_offset: offset array = 
+       [|RecordField("next", Zero); RecordField("prev", Zero); RecordField("top", Zero)|]
 
      let def_points_to_fresh: offset list = 
        [RecordField("next", Zero); RecordField("top", Zero)]
