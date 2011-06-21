@@ -192,7 +192,25 @@ module MAKE_SL_DOMAIN =
 	       if debug then print_debug "SL_DOMAIN: fail to fold at node %i\n" i;
 	       None
 
-       let try_modus_ponens: int -> t -> t option = fun i (g, p) -> None
+       let try_modus_ponens: int -> t -> t option = fun i (g, p) -> 
+	 if debug then print_debug "SL_DOMAIN: try modus ponens at %i t\n" i;
+	 try
+	   let ind0 = get (G.get_inductive i g) in
+	     if P.is_live ind0.target p || G.is_reached ind0.target (fun j->i!=j) g==[] then failwith "";
+	     let ind1 = get (G.get_inductive ind0.target g) in
+	       if List.exists2 (fun x y -> x!=y) ind0.target_parameters ind1.source_parameters
+	       then failwith "";
+	       let ind = 
+		 { target = ind0.target;
+		   source_parameters = ind0.source_parameters;
+		   target_parameters = ind1.target_parameters;
+		   length = if ind0.length==0 || ind1.length==0 then 0 else ind0.length+ind1.length;} in
+	       let g = (G.remove_inductive i (G.remove_inductive ind0.target g)) in
+		 Some (G.add_inductive i ind g, p)
+	 with 
+	   | _ ->  
+	       if debug then print_debug "SL_DOMAIN: failed modus ponens at node %i\n" i;
+	       None
 
        let canonicalize: t -> t = fun t -> t
 
@@ -215,6 +233,7 @@ let i, t = B.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordF
 let t1 = get (B.try_fold i t)
 let t1 = B.unfold i t1
 let t1 = B.reduce_equalities t1
+let t1 = try get (B.try_fold 1 t1) with | _ -> t1
 
 let _ = 
   Printf.printf "%s" (B.pp t);
