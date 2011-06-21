@@ -25,7 +25,10 @@ type inductive =
       length: int;}
 
 let pp_inductive: inductive -> string = fun ind ->
-  Printf.sprintf "(%s) *== %i(%s)" (pp_list ind.source_parameters) ind.target (pp_list ind.target_parameters)
+  Printf.sprintf "(%s) *=%s= %i(%s)" 
+    (pp_list ind.source_parameters) 
+    (if ind.length==0 then "_" else (Printf.sprintf "%i" ind.length)) 
+    ind.target (pp_list ind.target_parameters)
 
 let get_domain_inductive: inductive -> int list = fun ind ->
   ind.target::(List.append ind.source_parameters ind.target_parameters)
@@ -105,6 +108,7 @@ module type INDUCTIVE_DEF =
     val def_points_to_fresh: offset list
     val def_points_to_parameters: offset list
 
+    (* always the first fresh *)
     val induct_offset: offset
 
     (* current node -> parameters -> fresh *)
@@ -130,11 +134,11 @@ module type SL_DOMAIN =
     val break_inductive_backward: int -> t -> t*t
 
     val unfold: int -> t -> t 
-
-    val canonicalize: t -> t  
-   
     val find: int -> offset -> t -> (offset * int) list
     val deffer: t -> int -> offset -> int 
+
+    val fold: int -> t -> t
+    val canonicalize: t -> t  
 
     val mutation: int -> int -> t -> t
 
