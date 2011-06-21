@@ -44,7 +44,7 @@ module type SL_GRAPH_DOMAIN =
 
     val add_edge: int -> offset -> int -> t -> t
     val remove_edge: int -> offset -> t -> t
-      (* update i o j t <=> add i o j (remove i o t) *)
+    (* update i o j t <=> add i o j (remove i o t) *)
     val update_edge: int -> offset -> int -> t -> t
 
     val add_inductive: int -> inductive -> t -> t
@@ -59,6 +59,10 @@ module type SL_GRAPH_DOMAIN =
 
     val has_edge: int -> offset -> t -> bool
     val has_inductive: int -> t -> bool
+
+    (* check a predicate over all the nodes *)
+    val for_all: (int -> bool) -> t -> bool
+    val exists: (int -> bool) -> t -> bool 
 
     val find: int -> offset -> t -> (offset * int) list
 
@@ -107,7 +111,7 @@ module type INDUCTIVE_DEF =
     val number_of_parameters: int
     val number_of_fresh: int
 
-    val domain_offset: offset array
+    val domain_offset: offset list
 
     (* length = number_of_fresh *)
     val def_points_to_fresh: offset list  

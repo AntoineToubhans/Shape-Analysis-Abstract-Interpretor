@@ -135,6 +135,12 @@ module SL_GRAPH_DOMAIN =
 	if debug && not b then print_debug "SL_GRAPH_DOMAIN:has_inductive %i t.....No\n" i;
 	b
 	      
+    let for_all: (int -> bool) -> t -> bool = fun p t ->
+      IntMap.for_all (fun i n -> p i) t.nodes
+
+    let exists: (int -> bool) -> t -> bool = fun p t ->
+      IntMap.exists (fun i n -> p i) t.nodes
+
     let find: int -> offset -> t -> (offset * int) list = fun i o t ->
       if debug then print_debug "SL_GRAPH_DOMAIN: finding edges from Node(%i)%s...\n" i (pp_offset o);
       try 

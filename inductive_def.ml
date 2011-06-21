@@ -21,8 +21,8 @@ module TList =
      let number_of_parameters: int = 1
      let number_of_fresh: int = 2
 
-     let domain_offset: offset array = 
-       [|RecordField("next", Zero); RecordField("prev", Zero); RecordField("top", Zero)|]
+     let domain_offset: offset list = 
+       [RecordField("next", Zero); RecordField("prev", Zero); RecordField("top", Zero)]
 
      let def_points_to_fresh: offset list = 
        [RecordField("next", Zero); RecordField("prev", Zero)]
@@ -48,8 +48,8 @@ module DLList =
      let number_of_parameters: int = 1
      let number_of_fresh: int = 2
 
-     let domain_offset: offset array = 
-       [|RecordField("next", Zero); RecordField("prev", Zero); RecordField("top", Zero)|]
+     let domain_offset: offset list = 
+       [RecordField("next", Zero); RecordField("prev", Zero); RecordField("top", Zero)]
 
      let def_points_to_fresh: offset list = 
        [RecordField("next", Zero); RecordField("top", Zero)]

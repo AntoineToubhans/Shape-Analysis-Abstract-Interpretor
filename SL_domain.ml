@@ -49,11 +49,20 @@ module MAKE_SL_DOMAIN =
 	   if debug then print_debug "SL_DOMAIN: egalities reduced...\n";
 	   !rg, !rp
       
-       (* So far, is_bottom checks:    *)
-       (*  -     *)
-       (*  -     *)
-       let is_bottom: t -> bool = fun t -> false
-
+       (* So far, is_bottom checks:               *)
+       (*  - conflict between inductive and edges *)
+       (*  - is_bottom of predicates              *)
+       (*!! perfom a reduction of equalities      *)
+       (*!! increases chance to get bottom        *)
+       let is_bottom: t -> bool = fun (g, p) -> 
+	 let check_node i = 
+	   let opt_ind = G.get_inductive i g in
+	     (has opt_ind && (get opt_ind).length>0) 
+	     || List.for_all (fun o -> not (G.has_edge i o g)) D.domain_offset in
+	 let b_result = P.is_bottom p || G.for_all check_node g in
+	   if debug && b_result then print_debug "SL_DOMAIN: is t bottom?.....Yes\n"; 
+	   if debug && not b_result then print_debug "SL_DOMAIN: is t bottom?.....Yes\n";b_result
+	   
        let malloc: offset list -> t -> int*t = fun ol (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: malloc (%s)...\n" 
 	   (List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol);
@@ -62,7 +71,6 @@ module MAKE_SL_DOMAIN =
 	 let p = IntSet.fold (fun j p -> if j!=i then P.add_neq i j p else p) (G.domain g) p in
 	   i, (g, p)
 	     
-
        let nullify_inductive: int -> t -> t = fun i (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: nullify_inductive %i t\n" i;
 	 try
