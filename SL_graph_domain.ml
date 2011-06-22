@@ -141,6 +141,14 @@ module SL_GRAPH_DOMAIN =
     let exists: (int -> bool) -> t -> bool = fun p t ->
       IntMap.exists (fun i n -> p i) t.nodes
 
+    let str_get_node: (int -> node -> bool) -> t -> int list = fun p t ->
+      if debug then print_debug "SL_TL_GRAPH_DOMAIN: str_get pred t\n";
+      IntMap.fold
+	(fun i n l -> if p i n then i::l else l) t.nodes []
+
+    let get_node: (int -> bool) -> t -> int list = fun p t ->
+      str_get_node (fun i n -> p i) t
+
     let find: int -> offset -> t -> (offset * int) list = fun i o t ->
       if debug then print_debug "SL_GRAPH_DOMAIN: finding edges from Node(%i)%s...\n" i (pp_offset o);
       try 
@@ -189,29 +197,26 @@ module SL_GRAPH_DOMAIN =
 	       {nodes = IntMap.map change_node t.nodes;
 		next  = if t.next==i+1 then i else t.next;}
 
-    (* computes all j such that: *)
-    (*  -  j@o |--> i            *)
-    (*  -  p j o                 *)
-    let is_reached_by_edge: int -> (int -> offset -> bool) -> t -> int list = fun i p t ->
+    (* is the node reached by some j such that: *)
+    (*  -  j@o |--> i                           *)
+    (*  -  pred j o                             *)
+    let is_reached_by_edge: int -> (int -> offset -> bool) -> t -> bool = fun i p t ->
       if debug then print_debug "SL_GRAPH_DOMAIN: is_reached_by_edge %i p t\n" i;
-      IntMap.fold
- 	(fun j n l -> OffsetMap.fold (fun o k l -> if k==i && p j o then j::l else l) n.edges l)
-	t.nodes
-	[]
+      IntMap.exists
+	(fun j n -> OffsetMap.exists (fun o k -> k==i && p i o) n.edges) t.nodes
 
-    (* computes all j such that: *)
-    (*  -  j.c(a) *== i.c(b)     *)
-    (*  -  p j a b               *)
-    let is_reached_by_inductive: int -> (int -> inductive -> bool) -> t -> int list = fun i p t -> 
+    (* is the node reached by some j such that: *)
+    (*  -  j.c(a) *== i.c(b)                    *)
+    (*  -  pred j a b                           *)
+    let is_reached_by_inductive: int -> (int -> inductive -> bool) -> t -> bool = fun i p t -> 
       if debug then print_debug "SL_GRAPH_DOMAIN: is_reached_by_inductive %i p t\n" i;
-      IntMap.fold
-	(fun j n l -> map_default (fun ind -> if p j ind && ind.target==i then j::l else l) l n.inductive)
+      IntMap.exists
+	(fun j n -> has n.inductive && (get n.inductive).target==i && p i (get n.inductive))
 	t.nodes
-	[]
 
-    let is_reached: int -> (int -> bool) -> t -> int list = fun i p t ->
+    let is_reached: int -> (int -> bool) -> t -> bool = fun i p t ->
       if debug then print_debug "SL_GRAPH_DOMAIN: is_reached %i p t\n" i;
-      List.append (is_reached_by_edge i (fun i _ -> p i) t) (is_reached_by_inductive i (fun i _ -> p i) t)	
+      is_reached_by_edge i (fun i _ -> p i) t || is_reached_by_inductive i (fun i _ -> p i) t	
 
 
     (* may contains duplicates *)

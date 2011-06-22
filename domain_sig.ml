@@ -63,14 +63,15 @@ module type SL_GRAPH_DOMAIN =
     (* check a predicate over all the nodes *)
     val for_all: (int -> bool) -> t -> bool
     val exists: (int -> bool) -> t -> bool 
+    val get_node: (int -> bool) -> t -> int list
 
     val find: int -> offset -> t -> (offset * int) list
 
     val fusion: int -> int -> t -> t
 
-    val is_reached_by_edge: int -> (int -> offset -> bool) -> t -> int list
-    val is_reached_by_inductive: int -> (int -> inductive -> bool) -> t -> int list 
-    val is_reached: int -> (int -> bool) -> t -> int list
+    val is_reached_by_edge: int -> (int -> offset -> bool) -> t -> bool
+    val is_reached_by_inductive: int -> (int -> inductive -> bool) -> t -> bool
+    val is_reached: int -> (int -> bool) -> t -> bool
 
     val domain: t -> IntSet.t
     val pp: t -> string
@@ -83,7 +84,7 @@ module type PRED_DOMAIN =
     val empty: t
     val is_top: t -> bool
     (* under-approximation of bottom *)
-    (*      is_bottom t => t=_|_     *)
+    (*      is_bottom t => t= _|_     *)
     val is_bottom: t -> bool
     val check_bottom: t -> t
 

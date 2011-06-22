@@ -196,7 +196,7 @@ module MAKE_SL_DOMAIN =
 	 if debug then print_debug "SL_DOMAIN: try modus ponens at %i t\n" i;
 	 try
 	   let ind0 = get (G.get_inductive i g) in
-	     if P.is_live ind0.target p || G.is_reached ind0.target (fun j->i!=j) g==[] then failwith "";
+	     if P.is_live ind0.target p || G.is_reached ind0.target (fun j->i!=j) g then failwith "";
 	     let ind1 = get (G.get_inductive ind0.target g) in
 	       if List.exists2 (fun x y -> x!=y) ind0.target_parameters ind1.source_parameters
 	       then failwith "";
