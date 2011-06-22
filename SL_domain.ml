@@ -132,9 +132,9 @@ module MAKE_SL_DOMAIN =
 	   | No_value -> 
 	       error (Printf.sprintf "can not break inductive from %i: there's no inductive with no length" i)
 
-       (* unfold only finite sequence,              *)
-       (* raise Split of sequence of unknown length *)
-       (* fail if it can not unfold                 *)
+       (* unfold only finite sequence,                *)
+       (* raise Split over sequence of unknown length *)
+       (* fail if it can not unfold                   *)
        let unfold: int -> t -> t = fun i (g, p) -> 
 	 if debug then print_debug "SL_DOMAIN: unfold %i t\n" i;
  	 try
@@ -166,7 +166,7 @@ module MAKE_SL_DOMAIN =
        let deffer: t -> int -> offset -> int = fun t i o -> i 
 
        (* attempt to fold at node i: produces either     *)
-       (*  - Some t   if attemps was successful          *)
+       (*  - Some t   if attempt was successful          *)
        (*  - none   if it can not be fold for any reason *)
        let try_fold: int -> t -> t option = fun i (g, p) -> 
 	 if debug then print_debug "SL_DOMAIN: try to fold at %i t\n" i;
