@@ -86,8 +86,8 @@ module MAKE_SL_DOMAIN =
 	   | Invalid_argument _ ->	   
 	       error (Printf.sprintf "can not nullify inductive from %i: ill-formed inductive" i)
 		 
-       let break_inductive_forward: int -> t -> t*t = fun i (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: break_inductive_forward %i t\n" i;
+       let case_inductive_forward: int -> t -> t*t = fun i (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: case_inductive_forward %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
 	     if ind.length!=0 then raise No_value;
@@ -109,8 +109,8 @@ module MAKE_SL_DOMAIN =
 	   | No_value -> 
 	       error (Printf.sprintf "can not break inductive from %i: there's no inductive with no length" i)
 
-       let break_inductive_backward: int -> t -> t*t = fun i (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: break_inductive_backward %i t\n" i;
+       let case_inductive_backward: int -> t -> t*t = fun i (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: case_inductive_backward %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
 	     if ind.length!=0 then raise No_value;
@@ -131,6 +131,29 @@ module MAKE_SL_DOMAIN =
 	 with
 	   | No_value -> 
 	       error (Printf.sprintf "can not break inductive from %i: there's no inductive with no length" i)
+
+       let split_inductive_backward: int -> t -> t = fun i (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: split_inductive_backward %i t\n" i;
+	 try
+	   let ind = get (G.get_inductive i g) in
+	     if ind.length<2 then raise No_value;
+	     let args, g = G.create_n_fresh_nodes D.number_of_parameters g in
+	     let j, g = G.create_fresh_node g in
+	     let ind0 = 
+	       { target = j;
+		 source_parameters = ind.source_parameters;
+		 target_parameters = args;
+		 length = ind.length-1;}
+	     and ind1 =  
+	       { target = ind.target;
+		 source_parameters = args;
+		 target_parameters = ind.target_parameters;
+		 length = 1;} in
+	     let g = G.add_inductive j ind1 (G.update_inductive i ind0 g) in
+	       g, p
+	 with
+	   | No_value -> 
+	       error (Printf.sprintf "can not split inductive from %i: there's no inductive with length >2" i)
 
        (* unfold only finite sequence,                *)
        (* raise Split over sequence of unknown length *)
@@ -164,19 +187,21 @@ module MAKE_SL_DOMAIN =
 	       error (Printf.sprintf "inductive from %i ill-formed" i)
   
 		 
-       let find: int -> offset -> t -> t* (offset * int) list = fun i o t -> t, []
+       let find: int -> offset -> t -> (offset * int) list * t = fun i o t -> [], t
 
-       let indirection: t -> int -> offset -> t* int = fun (g, p) i o -> 
+       let indirection: t -> int -> offset -> int * t = fun (g, p) i o -> 
 	 if debug then print_debug "SL_DOMAIN: indirection operator (*) at %i%s\n" i (pp_offset o);
-	 try (g, p), get (G.get_edge i o g) 
+	 try get (G.get_edge i o g), (g, p) 
 	 with | No_value ->
 	   if List.mem o D.domain_offset && G.has_inductive i g then
 	     (* unfold can fail or raise Split *)
 	     let g, p = unfold i (g, p) in
 	       (* this can NOT fail *)
-	       (g, p), get (G.get_edge i o g)
+	       get (G.get_edge i o g), (g, p)
 	   else 
-	     raise Top
+	     let j, g = G.create_fresh_node g in
+	       (* we don't know where we are *)
+	       j, (g, p)
 	    
 		 (*
 	 else if List.mem o D.domain_offset && G.has_inductive i g then
@@ -244,9 +269,6 @@ then failwith "";
 
        let canonicalize: t -> t = fun t -> t
 (* if P.is_live ind0.target p || G.is_reached ind0.target (fun j->i!=j) g then failwith ""; *)
-
-
-       let mutation: int -> int -> t -> t = fun i j t -> t
 
        let pp: t -> string = fun (g, p) -> 
 	 Printf.sprintf 

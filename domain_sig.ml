@@ -131,18 +131,18 @@ module type SL_DOMAIN =
 
     val malloc: offset list -> t -> int*t
 
-    val break_inductive_forward: int -> t -> t*t
-    val break_inductive_backward: int -> t -> t*t
+    val case_inductive_forward: int -> t -> t*t
+    val case_inductive_backward: int -> t -> t*t
 
+    val split_inductive_backward: int -> t -> t
     val unfold: int -> t -> t 
-    val find: int -> offset -> t -> t* (offset * int) list
-    val indirection: t -> int -> offset -> t*int 
+
+    val find: int -> offset -> t -> (offset * int) list * t
+    val indirection: t -> int -> offset -> int * t
 
     val try_fold: int -> t -> t option
     val try_modus_ponens: int -> (int -> bool) -> t -> t option
     val canonicalize: t -> t  
-
-    val mutation: int -> int -> t -> t
 
     val pp: t -> string
   end
@@ -167,9 +167,10 @@ module type DOMAIN =
     val top: t        
     val bottom: t
 
-    val deffer: t-> offseted_node -> offseted_node
-      (* Mutation of the content of a cell *)
-    val mutation: t -> offseted_node -> offseted_node -> t 
+    val indirection: t-> offseted_node -> offseted_node
+    
+    (* mut [o1, ..on] (a, o) (b, o') performs a@o:=b@o' knowing a@o MUST have [o1,..on] fields *)
+    val mutation: offset list -> int -> offset -> int -> offset -> t -> t 
       
     val pp: t -> string
 
