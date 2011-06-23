@@ -8,7 +8,8 @@ open Inductive_def
 (* =========================================================== *)
 (* Module SL_Domain                                            *)
 (* =========================================================== *)
-(*                                  Last modified: AT 06/20/11 *)
+(*                                        Created: AT 06/10/11 *)
+(*                                  Last modified: AT 06/23/11 *)
 
 let error(s: string) = failwith (Printf.sprintf "SL_DOMAIN_ERROR: %s" s)
 

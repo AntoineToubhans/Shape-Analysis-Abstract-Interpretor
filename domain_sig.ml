@@ -160,14 +160,11 @@ exception Split of bool*int
  
 module type DOMAIN = 
   sig
-    val domainId : int
-  
+
     type t   
 
     val top: t        
     val bottom: t
-
-    val indirection: t-> offseted_node -> offseted_node
     
     (* mut [o1, ..on] (a, o) (b, o') performs a@o:=b@o' knowing a@o MUST have [o1,..on] fields *)
     val mutation: offset list -> int -> offset -> int -> offset -> t -> t 
