@@ -137,8 +137,11 @@ module type SL_DOMAIN =
     val split_inductive_backward: int -> t -> t
     val unfold: int -> t -> t 
 
-    val find: int -> offset -> t -> (offset * int) list * t
-    val indirection: t -> int -> offset -> int * t
+    val search: int -> offset -> t -> int * t
+    (* mutate a o b o1 t                  *)
+    (* t MUST contains   a@o->c * b@o1->d *)
+    (* which's replace:  a@o->d * b@o1->d *)
+    val mutate: int -> offset -> int -> offset -> t -> t
 
     val try_fold: int -> t -> t option
     val try_modus_ponens: int -> (int -> bool) -> t -> t option

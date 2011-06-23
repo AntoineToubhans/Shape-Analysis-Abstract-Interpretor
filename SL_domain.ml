@@ -65,7 +65,7 @@ module MAKE_SL_DOMAIN =
 	   if debug && not b_result then print_debug "SL_DOMAIN: is t bottom?.....Yes\n";b_result
 	   
        let malloc: offset list -> t -> int*t = fun ol (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: malloc (%s)...\n" 
+	 if debug then print_debug "SL_DOMAIN: malloc [%s ]...\n" 
 	   (List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol);
 	 let i, g = G.create_fresh_node g in
 	 let g = List.fold_left (fun g o -> G.add_edge i o 0 g) g ol in 
@@ -183,15 +183,12 @@ module MAKE_SL_DOMAIN =
 	       g, p
 	 with
 	   | No_value ->
-	       error (Printf.sprintf "SL_DOMAIN: unfold failed at %i (there's no inductive)" i)
+	       error (Printf.sprintf "unfold failed at %i (there's no inductive)" i)
 	   | Invalid_argument _ ->	   
 	       error (Printf.sprintf "inductive from %i ill-formed" i)
   
-		 
-       let find: int -> offset -> t -> (offset * int) list * t = fun i o t -> [], t
-
-       let indirection: t -> int -> offset -> int * t = fun (g, p) i o -> 
-	 if debug then print_debug "SL_DOMAIN: indirection operator (*) at %i%s\n" i (pp_offset o);
+       let search: int -> offset -> t -> int * t = fun i o (g, p) -> 
+	 if debug then print_debug "SL_DOMAIN: search for %i%s\n" i (pp_offset o);
 	 try get (G.get_edge i o g), (g, p) 
 	 with | No_value ->
 	   if List.mem o D.domain_offset && G.has_inductive i g then
@@ -199,20 +196,18 @@ module MAKE_SL_DOMAIN =
 	     let g, p = unfold i (g, p) in
 	       (* this can NOT fail *)
 	       get (G.get_edge i o g), (g, p)
-	   else 
+	   else (* if............................................ *)
 	     let j, g = G.create_fresh_node g in
 	       (* we don't know where we are *)
 	       j, (g, p)
-	    
-		 (*
-	 else if List.mem o D.domain_offset && G.has_inductive i g then
-	   rc_indirection 
-then failwith "";
-	   rc_indirection () i o (counter+1)
+
+       let mutate: int -> offset -> int -> offset -> t -> t = fun i o j o1 (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: mutate [%i%s := %i%s]\n" i (pp_offset o) j (pp_offset o1);
+	 try 
+	   G.add_edge i o (get (G.get_edge j o1 g)) (G.remove_edge i o g), p
 	 with
-	   | Failure _ -> 	 
-	     print_debug "SL_DOMAIN: indirection operator (*) successful: *(%i%s) -> %i\n" i (pp_offset o) ..;
-		 *)
+	   | _ ->
+	       error (Printf.sprintf "can not perform mutation [%i%s := %i%s]" i (pp_offset o) j (pp_offset o1))
 
        (* attempt to fold at node i: produces either     *)
        (*  - Some t   if attempt was successful          *)
