@@ -104,7 +104,7 @@ module SL_GRAPH_DOMAIN =
     let get_edge: int -> offset -> t -> int option = fun i o t ->
       try 
 	let j = OffsetMap.find o (IntMap.find i t.nodes).edges in
-	  if debug then print_debug "SL_GRAPH_DOMAIN:get_edge %i %s t.....%i\n" i (pp_offset o) j;
+	  if debug then print_debug "SL_GRAPH_DOMAIN:get_edge %i %s t.....[%i]\n" i (pp_offset o) j;
 	  Some j
       with
 	| Not_found -> 
@@ -114,7 +114,7 @@ module SL_GRAPH_DOMAIN =
     let get_inductive: int -> t -> inductive option = fun i t ->
       try
 	let ind = get (IntMap.find i t.nodes).inductive in
-	  if debug then print_debug "SL_GRAPH_DOMAIN:get_inductive %i t.....%i.%s\n" i i (pp_inductive ind);
+	  if debug then print_debug "SL_GRAPH_DOMAIN:get_inductive %i t.....[%i.%s]\n" i i (pp_inductive ind);
 	  Some ind
       with 
 	| Not_found | No_value ->
@@ -161,7 +161,7 @@ module SL_GRAPH_DOMAIN =
 
     (* fusion i j deletes i *)
     let fusion: int -> int -> t -> t = fun i j t ->
-      if debug then print_debug "SL_TL_GRAPH_DOMAIN:fusion_node %i %i t\n" i j;
+      if debug then print_debug "SL_GRAPH_DOMAIN:fusion %i %i t\n" i j;
       let change_index = fun k-> if i==k then j else k in
       let change_inductive = function | None -> None | Some ind ->
 	Some

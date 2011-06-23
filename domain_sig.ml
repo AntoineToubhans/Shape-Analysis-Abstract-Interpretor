@@ -16,7 +16,7 @@ type inductive =
 let pp_inductive: inductive -> string = fun ind ->
   Printf.sprintf "ind(%s) *=%s= %i.ind(%s)" 
     (pp_list ind.source_parameters) 
-    (if ind.length==0 then "_" else (Printf.sprintf "%i" ind.length)) 
+    (if ind.length==0 then "" else (Printf.sprintf "%i" ind.length)) 
     ind.target (pp_list ind.target_parameters)
 
 let get_domain_inductive: inductive -> int list = fun ind ->
@@ -148,6 +148,9 @@ module type SL_DOMAIN =
     val canonicalize: t -> t  
 
     val pp: t -> string
+
+    (* test*)
+    val mk: G.t -> P.t -> t
   end
 
 (* request to split an inductive *)

@@ -249,7 +249,7 @@ module MAKE_SL_DOMAIN =
 	       if List.exists2 (fun x y -> x!=y) ind0.target_parameters ind1.source_parameters
 	       then failwith "arguments don't match";
 	       let ind = 
-		 { target = ind0.target;
+		 { target = ind1.target;
 		   source_parameters = ind0.source_parameters;
 		   target_parameters = ind1.target_parameters;
 		   length = if ind0.length==0 || ind1.length==0 then 0 else ind0.length+ind1.length;} in
@@ -270,22 +270,38 @@ module MAKE_SL_DOMAIN =
 	 Printf.sprintf 
 	   "***-------Print SL_DOMAIN --------***\n*** with inductive: %s ***\n%s%s" 
 	   D.name (P.pp p) (G.pp g)
+
+       let mk x y = 
+	 if debug then print_debug "SL_DOMAIN: MAKE ********test purposes only!\n";
+	 x, y
 	   
      end: SL_DOMAIN)
 
+(*
+module A = MAKE_SL_DOMAIN(DLList)
 
-module B = MAKE_SL_DOMAIN(DLList)
+let g = A.G.empty
+let p = A.P.empty
+let p = A.P.add_neq 1 2 p
 
-let _, t = B.malloc [Zero] B.empty
-let i, t = B.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
-let t1 = get (B.try_fold i t)
-let t1 = B.unfold i t1
-let t1 = B.reduce_equalities t1
+let g = A.G.add_inductive 1 {target=2; source_parameters=[0]; target_parameters=[3]; length=0} g
+let g = A.G.add_edge 2 (RecordField ("prev", Zero)) 3 g
+
+let t: A.t = A.mk g p
+
+let t1, t2 = A.case_inductive_backward 1 t
+
+let t2 = A.unfold 5 t1
+let t3 = A.reduce_equalities t2
 
 let _ = 
-  Printf.printf "%s" (B.pp t);
-  Printf.printf "%s" (B.pp t1)
+  Printf.printf "%s" (A.pp t);
+  Printf.printf "%s" (A.pp t1);
+  Printf.printf "%s" (A.pp t2);
+  Printf.printf "%s" (A.pp t3); 
+*)
 
+(*
 module A = MAKE_SL_DOMAIN(TList)
 
 let _, t = A.malloc [Zero] A.empty
@@ -297,3 +313,4 @@ let t1 = A.reduce_equalities t1
 let _ = 
   Printf.printf "%s" (A.pp t);
   Printf.printf "%s" (A.pp t1)
+*)
