@@ -4,17 +4,6 @@
 open Offset
 open Utils
 
-(* request to split an inductive *)
-(*      Split true, i :          *)
-(* i ===_===> j                  *)
-(*      -> fusion i j            *)
-(*      -> i===1===> k===_===> j *)
-(*      Split true, i :          *)
-(* i ===_===> j                  *)
-(*      -> fusion i j            *)
-(*      -> i===_===> k===1===> j *)
-exception Split of bool*int
- 
 type inductive = 
     { target: int;
       source_parameters: int list;
@@ -146,8 +135,8 @@ module type SL_DOMAIN =
     val break_inductive_backward: int -> t -> t*t
 
     val unfold: int -> t -> t 
-    val find: int -> offset -> t -> (offset * int) list
-    val deffer: t -> int -> offset -> int 
+    val find: int -> offset -> t -> t* (offset * int) list
+    val indirection: t -> int -> offset -> t*int 
 
     val try_fold: int -> t -> t option
     val try_modus_ponens: int -> (int -> bool) -> t -> t option
@@ -158,6 +147,17 @@ module type SL_DOMAIN =
     val pp: t -> string
   end
 
+(* request to split an inductive *)
+(*      Split true, i :          *)
+(* i ===_===> j                  *)
+(*      -> fusion i j            *)
+(*      -> i===1===> k===_===> j *)
+(*      Split true, i :          *)
+(* i ===_===> j                  *)
+(*      -> fusion i j            *)
+(*      -> i===_===> k===1===> j *)
+exception Split of bool*int
+ 
 module type DOMAIN = 
   sig
     val domainId : int

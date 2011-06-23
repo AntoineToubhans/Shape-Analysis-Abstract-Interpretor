@@ -136,7 +136,7 @@ module MAKE_SL_DOMAIN =
        (* raise Split over sequence of unknown length *)
        (* fail if it can not unfold                   *)
        let unfold: int -> t -> t = fun i (g, p) -> 
-	 if debug then print_debug "SL_DOMAIN: unfold %i t\n" i;
+	 if debug then print_debug "SL_DOMAIN: try_unfold %i t\n" i;
  	 try
 	   let ind = get (G.get_inductive i g) in
 	     if ind.length==0 then raise (Split (true, i));
@@ -154,16 +154,39 @@ module MAKE_SL_DOMAIN =
 	     let g = G.add_inductive (List.hd fresh) ind g in
 	       (* we reduced if the inductive has zero length *)
 	     let g, p = if ind.length==0 then nullify_inductive (List.hd fresh) (g, p) else g, p in
-	       (g, P.add_neq 0 i p)
+	     let p = P.add_neq 0 i p in
+	       if debug then print_debug "SL_DOMAIN: unfold successfull at %i t\n" i;
+	       g, p
 	 with
-	   | No_value -> 
-	       error (Printf.sprintf "can not unfold inductive from %i: there's no inductive" i)
+	   | No_value ->
+	       error (Printf.sprintf "SL_DOMAIN: unfold failed at %i (there's no inductive)" i)
 	   | Invalid_argument _ ->	   
 	       error (Printf.sprintf "inductive from %i ill-formed" i)
   
 		 
-       let find: int -> offset -> t -> (offset * int) list = fun i o t -> []
-       let deffer: t -> int -> offset -> int = fun t i o -> i 
+       let find: int -> offset -> t -> t* (offset * int) list = fun i o t -> t, []
+
+       let indirection: t -> int -> offset -> t* int = fun (g, p) i o -> 
+	 if debug then print_debug "SL_DOMAIN: indirection operator (*) at %i%s\n" i (pp_offset o);
+	 try (g, p), get (G.get_edge i o g) 
+	 with | No_value ->
+	   if List.mem o D.domain_offset && G.has_inductive i g then
+	     (* unfold can fail or raise Split *)
+	     let g, p = unfold i (g, p) in
+	       (* this can NOT fail *)
+	       (g, p), get (G.get_edge i o g)
+	   else 
+	     raise Top
+	    
+		 (*
+	 else if List.mem o D.domain_offset && G.has_inductive i g then
+	   rc_indirection 
+then failwith "";
+	   rc_indirection () i o (counter+1)
+	 with
+	   | Failure _ -> 	 
+	     print_debug "SL_DOMAIN: indirection operator (*) successful: *(%i%s) -> %i\n" i (pp_offset o) ..;
+		 *)
 
        (* attempt to fold at node i: produces either     *)
        (*  - Some t   if attempt was successful          *)
@@ -233,9 +256,7 @@ module MAKE_SL_DOMAIN =
      end: SL_DOMAIN)
 
 
-
-module B = MAKE_SL_DOMAIN(TList)
-module A = MAKE_SL_DOMAIN(DLList)
+module B = MAKE_SL_DOMAIN(DLList)
 
 let _, t = B.malloc [Zero] B.empty
 let i, t = B.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
@@ -247,3 +268,14 @@ let _ =
   Printf.printf "%s" (B.pp t);
   Printf.printf "%s" (B.pp t1)
 
+module A = MAKE_SL_DOMAIN(TList)
+
+let _, t = A.malloc [Zero] A.empty
+let i, t = A.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
+let t1 = get (A.try_fold i t)
+let t1 = A.unfold i t1
+let t1 = A.reduce_equalities t1
+
+let _ = 
+  Printf.printf "%s" (A.pp t);
+  Printf.printf "%s" (A.pp t1)

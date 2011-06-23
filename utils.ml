@@ -24,6 +24,7 @@ let map_default: ('a -> 'b) -> 'b -> 'a option -> 'b = fun f b ->
 
 exception Top
 exception Bottom
+exception Nope
 
 let maxlist l = 
   let rec ml l acc = 
