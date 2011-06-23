@@ -51,14 +51,14 @@ module MAKE_SL_DOMAIN =
       
        (* So far, is_bottom checks:               *)
        (*  - conflict between inductive and edges *)
-       (*  - is_bottom of predicates              *)
+       (*  - is_bottom over predicates            *)
        (*!! perfom a reduction of equalities      *)
        (*!! increases chance to get bottom        *)
        let is_bottom: t -> bool = fun (g, p) -> 
 	 let check_node i = 
 	   let opt_ind = G.get_inductive i g in
 	     (has opt_ind && (get opt_ind).length>0) 
-	     || List.for_all (fun o -> not (G.has_edge i o g)) D.domain_offset in
+	     || List.exists (fun o -> G.has_edge i o g) D.domain_offset in
 	 let b_result = P.is_bottom p || G.for_all check_node g in
 	   if debug && b_result then print_debug "SL_DOMAIN: is t bottom?.....Yes\n"; 
 	   if debug && not b_result then print_debug "SL_DOMAIN: is t bottom?.....Yes\n";b_result
@@ -192,14 +192,18 @@ module MAKE_SL_DOMAIN =
 	       if debug then print_debug "SL_DOMAIN: fail to fold at node %i\n" i;
 	       None
 
-       let try_modus_ponens: int -> t -> t option = fun i (g, p) -> 
+       (* try a modus ponens reduction at node i         *)
+       (*  - i.c(a) *== j.c(b)  |                        *)
+       (*  - j.c(b) *== k.c(c)  | --> i.c(a) *== k.c(c)  *)
+       (*  - pred j = true      |                        *)
+       let try_modus_ponens: int -> (int -> bool) -> t -> t option = fun i pred (g, p) -> 
 	 if debug then print_debug "SL_DOMAIN: try modus ponens at %i t\n" i;
 	 try
 	   let ind0 = get (G.get_inductive i g) in
-	     if P.is_live ind0.target p || G.is_reached ind0.target (fun j->i!=j) g then failwith "";
+	     if pred ind0.target then failwith "predicate failure";
 	     let ind1 = get (G.get_inductive ind0.target g) in
 	       if List.exists2 (fun x y -> x!=y) ind0.target_parameters ind1.source_parameters
-	       then failwith "";
+	       then failwith "arguments don't match";
 	       let ind = 
 		 { target = ind0.target;
 		   source_parameters = ind0.source_parameters;
@@ -208,11 +212,16 @@ module MAKE_SL_DOMAIN =
 	       let g = (G.remove_inductive i (G.remove_inductive ind0.target g)) in
 		 Some (G.add_inductive i ind g, p)
 	 with 
+	   | Failure s ->  
+	       if debug then print_debug "SL_DOMAIN: failed modus ponens at node %i: %s\n" i s;
+	       None
 	   | _ ->  
 	       if debug then print_debug "SL_DOMAIN: failed modus ponens at node %i\n" i;
 	       None
 
        let canonicalize: t -> t = fun t -> t
+(* if P.is_live ind0.target p || G.is_reached ind0.target (fun j->i!=j) g then failwith ""; *)
+
 
        let mutation: int -> int -> t -> t = fun i j t -> t
 
@@ -225,15 +234,14 @@ module MAKE_SL_DOMAIN =
 
 
 
-module A = MAKE_SL_DOMAIN(TList)
-module B = MAKE_SL_DOMAIN(DLList)
+module B = MAKE_SL_DOMAIN(TList)
+module A = MAKE_SL_DOMAIN(DLList)
 
 let _, t = B.malloc [Zero] B.empty
 let i, t = B.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
 let t1 = get (B.try_fold i t)
 let t1 = B.unfold i t1
 let t1 = B.reduce_equalities t1
-let t1 = try get (B.try_fold 1 t1) with | _ -> t1
 
 let _ = 
   Printf.printf "%s" (B.pp t);

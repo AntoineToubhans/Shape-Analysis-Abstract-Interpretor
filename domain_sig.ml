@@ -150,7 +150,7 @@ module type SL_DOMAIN =
     val deffer: t -> int -> offset -> int 
 
     val try_fold: int -> t -> t option
-    val try_modus_ponens: int -> t -> t option
+    val try_modus_ponens: int -> (int -> bool) -> t -> t option
     val canonicalize: t -> t  
 
     val mutation: int -> int -> t -> t
