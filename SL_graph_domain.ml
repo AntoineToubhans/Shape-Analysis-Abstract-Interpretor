@@ -129,6 +129,14 @@ module SL_GRAPH_DOMAIN =
 	if debug && not b then print_debug "SL_GRAPH_DOMAIN:has_edge %i %s t.....No\n" i (pp_offset o);
 	b
 
+    let has_edges: int -> t -> bool = fun i t ->
+      let b = 
+	try OffsetMap.is_empty (IntMap.find i t.nodes).edges 
+	with | Not_found -> false in
+	if debug && b then print_debug "SL_GRAPH_DOMAIN:has_edges %i t.....Yes\n" i;
+	if debug && not b then print_debug "SL_GRAPH_DOMAIN:has_edges %i t.....No\n" i;
+	b
+
     let has_inductive: int -> t -> bool = fun i t ->
       let b = try has (IntMap.find i t.nodes).inductive with | Not_found -> false in
 	if debug && b then print_debug "SL_GRAPH_DOMAIN:has_inductive %i t.....Yes\n" i;

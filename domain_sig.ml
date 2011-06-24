@@ -47,6 +47,7 @@ module type SL_GRAPH_DOMAIN =
     val get_inductive: int -> t -> inductive option
 
     val has_edge: int -> offset -> t -> bool
+    val has_edges: int -> t -> bool
     val has_inductive: int -> t -> bool
 
     (* check a predicate over all the nodes *)
@@ -123,7 +124,7 @@ module type SL_DOMAIN =
     val empty: t
 
     val fusion: int -> int -> t -> t 
-    val reduce_equalities: t -> t
+    val reduce_equalities_one_step: t -> t option
 
     (* under-approximation of bottom *)
     (*      is_bottom t => t=_|_     *)

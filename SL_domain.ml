@@ -25,19 +25,51 @@ module MAKE_SL_DOMAIN =
 	   
        let empty: t = G.empty, P.empty
     	
+       (* WARNING : doesn't check the length, and nullify anyway *)
+       let nullify_inductive: int -> t -> t = fun i (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: nullify_inductive %i t\n" i;
+	 try
+	   let ind = get (G.get_inductive i g) in
+	   let p = 
+	     List.fold_left2 
+	       (fun g x y -> P.add_eq x y g)
+	       (P.add_eq i ind.target p) ind.source_parameters ind.target_parameters in
+	     (G.remove_inductive i g, p)
+	 with
+	   | No_value -> 
+	       error (Printf.sprintf "can not nullify inductive from %i: there's no inductive" i)
+	   | Invalid_argument _ ->	   
+	       error (Printf.sprintf "can not nullify inductive from %i: ill-formed inductive" i)
+		 
        let fusion: int -> int -> t -> t = fun i j (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: fusion %i %i t\n" i j;
-	 if (i==0 && not (G.is_node_empty j g))||(j==0 && not(G.is_node_empty i g)) then raise Bottom; 
-	 if i==j then 
-	   (g, p) 
-	 else if not (P.is_live i p) then
-	   G.fusion i j g, P.check_bottom (P.fusion i j p)
-	 else if not (P.is_live j p) then 
-	   G.fusion j i g, P.check_bottom (P.fusion j i p)
-	 else
-	   raise Bottom
-	     
-       let rec reduce_equalities: t -> t = fun (g, p) ->
+	 if (i==0 && G.has_edges j g)||(j==0 && G.has_edges i g) then raise Bottom;
+	 let opt_ind_i = G.get_inductive i g and opt_ind_j = G.get_inductive j g in
+	 let g, p = 	 
+	   if i==0 && G.has_inductive j g then
+	     nullify_inductive i (g, p)
+	   else if j==0 && G.has_inductive i g then
+	     nullify_inductive i (g, p)
+	   else
+	     g, p in
+	   if i==j then 
+	     (g, p) 
+	   else if not (P.is_live i p) then
+	     G.fusion i j g, P.check_bottom (P.fusion i j p)
+	   else if not (P.is_live j p) then 
+	     G.fusion j i g, P.check_bottom (P.fusion j i p)
+	   else
+	     raise Bottom
+	     	     
+       let reduce_equalities_one_step: t -> t option = fun (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: reduce_equalities_one_step t...\n";
+	 let rp = ref p in
+	   match P.pop_equality rp with
+	     | Some (i, j) ->
+		 Some(fusion i j (g, !rp))
+	     | None -> None
+
+       let reduce_equalities: t -> t = fun (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: reduce_equalities t...\n";
 	 let rg = ref g and rp = ref p in
 	 let eq = ref (P.pop_equality rp) in
@@ -72,21 +104,6 @@ module MAKE_SL_DOMAIN =
 	 let p = IntSet.fold (fun j p -> if j!=i then P.add_neq i j p else p) (G.domain g) p in
 	   i, (g, p)
 	     
-       let nullify_inductive: int -> t -> t = fun i (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: nullify_inductive %i t\n" i;
-	 try
-	   let ind = get (G.get_inductive i g) in
-	   let p = 
-	     List.fold_left2 
-	       (fun g x y -> P.add_eq x y g)
-	       (P.add_eq i ind.target p) ind.source_parameters ind.target_parameters in
-	     (G.remove_inductive i g, p)
-	 with
-	   | No_value -> 
-	       error (Printf.sprintf "can not nullify inductive from %i: there's no inductive" i)
-	   | Invalid_argument _ ->	   
-	       error (Printf.sprintf "can not nullify inductive from %i: ill-formed inductive" i)
-		 
        let case_inductive_forward: int -> t -> t*t = fun i (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: case_inductive_forward %i t\n" i;
 	 try
