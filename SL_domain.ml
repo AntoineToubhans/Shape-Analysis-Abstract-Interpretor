@@ -47,23 +47,29 @@ module MAKE_SL_DOMAIN =
 	 if P.is_live i p && P.is_live j p && i!=j then raise Bottom; 
 	 let opt_ind_i = G.get_inductive i g and opt_ind_j = G.get_inductive j g
 	 and do_fusion i j g p = 
-	   G.fusion i j g, P.check_bottom (P.fusion i j p) 
+	   if P.is_live j p then G.fusion i j g, P.check_bottom (P.fusion i j p) 
+	   else G.fusion j i g, P.check_bottom (P.fusion j i p) 
 	 in
 	   if i==j then g, p else  
 	     match opt_ind_i, opt_ind_j, i, j with
 	       | Some ind_i, Some ind_j, _, _ ->
-		   raise Top
+		   if ind_i.length>0 && ind_j.length>0 then raise Bottom;
+		   if ind_i.length>0 then 
+		     let g, p = nullify_inductive j (g, p) in do_fusion i j g p
+		   else if ind_j.length>0 then
+		     let g, p = nullify_inductive i (g, p) in do_fusion i j g p
+		   else raise (Split (true, i))
 	       | _, Some ind_j, 0, _ -> 
-		   if P.is_live j p || ind_j.length>0 then raise Bottom;
+		   if ind_j.length>0 then raise Bottom;
 		   let g, p = nullify_inductive j (g, p) in 
 		     do_fusion j 0 g p
 	       | Some ind_i, _, _, 0 -> 
-		   if P.is_live i p || ind_i.length>0 then raise Bottom;
+		   if ind_i.length>0 then raise Bottom;
 		   let g, p = nullify_inductive i (g, p) in
 		     do_fusion i 0 g p
 	       | _, _, _, _ -> 
-		   if not (P.is_live i p) then do_fusion i j g p
-		   else do_fusion j i g p 
+		   do_fusion i j g p
+		  
 	     	     
        let reduce_equalities_one_step: t -> t option = fun (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: reduce_equalities_one_step t...\n";
