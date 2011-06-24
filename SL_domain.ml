@@ -44,22 +44,26 @@ module MAKE_SL_DOMAIN =
        let fusion: int -> int -> t -> t = fun i j (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: fusion %i %i t\n" i j;
 	 if (i==0 && G.has_edges j g)||(j==0 && G.has_edges i g) then raise Bottom;
-	 let opt_ind_i = G.get_inductive i g and opt_ind_j = G.get_inductive j g in
-	 let g, p = 	 
-	   if i==0 && G.has_inductive j g then
-	     nullify_inductive i (g, p)
-	   else if j==0 && G.has_inductive i g then
-	     nullify_inductive i (g, p)
-	   else
-	     g, p in
-	   if i==j then 
-	     (g, p) 
-	   else if not (P.is_live i p) then
-	     G.fusion i j g, P.check_bottom (P.fusion i j p)
-	   else if not (P.is_live j p) then 
-	     G.fusion j i g, P.check_bottom (P.fusion j i p)
-	   else
-	     raise Bottom
+	 if P.is_live i p && P.is_live j p && i!=j then raise Bottom; 
+	 let opt_ind_i = G.get_inductive i g and opt_ind_j = G.get_inductive j g
+	 and do_fusion i j g p = 
+	   G.fusion i j g, P.check_bottom (P.fusion i j p) 
+	 in
+	   if i==j then g, p else  
+	     match opt_ind_i, opt_ind_j, i, j with
+	       | Some ind_i, Some ind_j, _, _ ->
+		   raise Top
+	       | _, Some ind_j, 0, _ -> 
+		   if P.is_live j p || ind_j.length>0 then raise Bottom;
+		   let g, p = nullify_inductive j (g, p) in 
+		     do_fusion j 0 g p
+	       | Some ind_i, _, _, 0 -> 
+		   if P.is_live i p || ind_i.length>0 then raise Bottom;
+		   let g, p = nullify_inductive i (g, p) in
+		     do_fusion i 0 g p
+	       | _, _, _, _ -> 
+		   if not (P.is_live i p) then do_fusion i j g p
+		   else do_fusion j i g p 
 	     	     
        let reduce_equalities_one_step: t -> t option = fun (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: reduce_equalities_one_step t...\n";
@@ -318,16 +322,19 @@ let _ =
   Printf.printf "%s" (A.pp t3); 
 *)
 
-(*
+
 module A = MAKE_SL_DOMAIN(TList)
 
 let _, t = A.malloc [Zero] A.empty
 let i, t = A.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
 let t1 = get (A.try_fold i t)
 let t1 = A.unfold i t1
-let t1 = A.reduce_equalities t1
+let t2 = get (A.reduce_equalities_one_step t1)
+let t3 = get (A.reduce_equalities_one_step t2)
 
 let _ = 
   Printf.printf "%s" (A.pp t);
-  Printf.printf "%s" (A.pp t1)
-*)
+  Printf.printf "%s" (A.pp t1);
+  Printf.printf "%s" (A.pp t2);
+  Printf.printf "%s" (A.pp t3)
+

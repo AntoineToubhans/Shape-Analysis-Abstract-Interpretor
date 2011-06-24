@@ -131,7 +131,7 @@ module SL_GRAPH_DOMAIN =
 
     let has_edges: int -> t -> bool = fun i t ->
       let b = 
-	try OffsetMap.is_empty (IntMap.find i t.nodes).edges 
+	try not (OffsetMap.is_empty (IntMap.find i t.nodes).edges) 
 	with | Not_found -> false in
 	if debug && b then print_debug "SL_GRAPH_DOMAIN:has_edges %i t.....Yes\n" i;
 	if debug && not b then print_debug "SL_GRAPH_DOMAIN:has_edges %i t.....No\n" i;
