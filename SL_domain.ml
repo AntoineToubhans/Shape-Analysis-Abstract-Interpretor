@@ -11,6 +11,7 @@ open Inductive_def
 (*                                        Created: AT 06/10/11 *)
 (*                                  Last modified: AT 06/23/11 *)
 
+
 let error(s: string) = failwith (Printf.sprintf "SL_DOMAIN_ERROR: %s" s)
 
 module MAKE_SL_DOMAIN = 
