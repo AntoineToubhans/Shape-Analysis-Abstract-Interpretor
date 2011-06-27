@@ -59,6 +59,12 @@ module MAKE_SL_DOMAIN =
 		     let g, p = nullify_inductive j (g, p) in do_fusion i j g p
 		   else if ind_j.length>0 then
 		     let g, p = nullify_inductive i (g, p) in do_fusion i j g p
+		   else if ind_i.target == j then
+		     (* i ==> j ==> k  can be handled directly *)
+		     let g, p = nullify_inductive i (g, p) in do_fusion i j g p
+		   else if ind_j.target == i then 
+		     (* j ==> i ==> k  can be handled directly *)
+		     let g, p = nullify_inductive j (g, p) in do_fusion i j g p
 		   else raise (Split (true, i))
 	       | _, Some ind_j, 0, _ -> 
 		   if ind_j.length>0 then raise Bottom;
