@@ -231,9 +231,7 @@ module MAKE_SL_DOMAIN =
 	       (* this can NOT fail *)
 	       get (G.get_edge i o g), (g, p)
 	   else (* if............................................ *)
-	     let j, g = G.create_fresh_node g in
-	       (* we don't know where we are *)
-	       j, (g, p)
+	     raise Top
 
        let mutate: int -> offset -> int -> offset -> t -> t = fun i o j o1 (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: mutate [%i%s := %i%s]\n" i (pp_offset o) j (pp_offset o1);
@@ -335,7 +333,7 @@ let _ =
   Printf.printf "%s" (A.pp t3); 
 *)
 
-
+(*
 module A = MAKE_SL_DOMAIN(TList)
 
 let _, t = A.malloc [Zero] A.empty
@@ -351,3 +349,4 @@ let _ =
   Printf.printf "%s" (A.pp t2);
   Printf.printf "%s" (A.pp t3)
 
+*)

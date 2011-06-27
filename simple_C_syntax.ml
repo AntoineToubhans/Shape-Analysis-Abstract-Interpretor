@@ -141,7 +141,7 @@ and sc_block2str(b: sc_block) =
   List.fold_left (fun s p -> Printf.sprintf "%s%s" s (sc_command2str p)) "" b 
 
 
-(* ======= test pp======== *)
+(* ======= test pp======== 
 
 let dll = ("dll",[("data", ScInt);("next", PointerTo(Struct "dll"));("prev", PointerTo(Struct "dll"))]) 
 let l={var_name="l"; var_type=Struct "dll"; var_uniqueId=0;}
@@ -166,3 +166,4 @@ let _ =
   Printf.printf "%s" (sc_command2str p);
   
   
+*)

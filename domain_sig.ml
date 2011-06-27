@@ -3,6 +3,7 @@
 
 open Offset
 open Utils
+open Simple_C_syntax
 
 type inductive = 
     { target: int;
@@ -139,9 +140,9 @@ module type SL_DOMAIN =
     val unfold: int -> t -> t 
 
     val search: int -> offset -> t -> int * t
-    (* mutate a o b o1 t                  *)
-    (* t MUST contains   a@o->c * b@o1->d *)
-    (* which's replace:  a@o->d * b@o1->d *)
+    (* mutate a o b o1 t                      *)
+    (* t MUST contains       a@o->c * b@o1->d *)
+    (* which's replaced by:  a@o->d * b@o1->d *)
     val mutate: int -> offset -> int -> offset -> t -> t
 
     val try_fold: int -> t -> t option
@@ -173,9 +174,11 @@ module type DOMAIN =
     val top: t        
     val bottom: t
     
-    (* mut [o1, ..on] (a, o) (b, o') performs a@o:=b@o' knowing a@o MUST have [o1,..on] fields *)
-    val mutation: offset list -> int -> offset -> int -> offset -> t -> t 
+    (* mut [o1, ..on] &x &y assign *)
+    val mutation: offset list -> int -> int -> sc_assignment -> t -> t 
       
+    val filter: int -> int -> sc_cond -> t -> t
+
     val pp: t -> string
 
   end 
