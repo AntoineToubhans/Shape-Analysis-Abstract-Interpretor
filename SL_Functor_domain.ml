@@ -17,14 +17,46 @@ let error(s: string) = failwith (Printf.sprintf "DOMAIN_ERROR: %s" s)
 
 module MAKE_DOMAIN =
   functor (S: SL_DOMAIN) -> 
-    (struct
+    struct
   
        type t = 
 	 | Disjunction of S.t list
-	 | Top
+	 | D_Top
 	 
-       let top: t = Top        
+       let top: t = D_Top        
        let bottom: t = Disjunction []
+
+       let is_top: t -> bool = fun t ->
+	 match t with
+	   | D_Top -> true
+	   | _ -> false
+
+       let is_bottom: t -> bool  = fun t ->
+	 match t with
+	   | Disjunction l -> l==[]
+	   | _ -> false
+
+       let disjunction: t -> t -> t = fun t u ->
+	 match t, u with
+	   | D_Top, _ | _, D_Top -> D_Top
+	   | Disjunction lt, Disjunction lu -> Disjunction (List.append lt lu)
+
+       let catch_split b i t = 
+	 if b then S.case_inductive_forward i t else S.case_inductive_backward i t
+
+       let rec reduce_equalities: S.t -> t = fun t ->
+	 if debug then print_debug "DOMAIN: [rec] reduce_equalities \n";
+	 try
+	   match S.reduce_equalities_one_step t with
+	     | None -> Disjunction [t]
+	     | Some t -> reduce_equalities t
+	 with
+	   | Bottom -> bottom
+	   | Top -> top
+	   | Split(b, i) ->
+	       let t1, t2 = catch_split b i t in
+		 disjunction (reduce_equalities t1) (reduce_equalities t1)	  
+	  
 
        let rec get_sc_hvalue: sc_hvalue -> int -> offset list -> S.t -> (S.t * int * offset) list = fun e i l t ->
 	 if debug then print_debug "DOMAIN: [rec] get_sc_value %s\n" (sc_hvalue2str e);
@@ -42,7 +74,8 @@ module MAKE_DOMAIN =
 		 let j, t = S.malloc l t in [(t, j, Zero)]
 	 with
 	   | Split (b, j) ->
-	       let t1, t2 = if b then S.case_inductive_forward j t else S.case_inductive_backward j t in 
+	       if debug then print_debug "DOMAIN: Split(%b, %i) caugth **\n" b j;
+	       let t1, t2 = catch_split b j t in 
 		 List.append (get_sc_hvalue e i l t1) (get_sc_hvalue e i l t2)
 
        let mutation: offset list -> int -> int -> sc_assignment -> t -> t = fun l i j assign t -> t
@@ -58,10 +91,34 @@ module MAKE_DOMAIN =
 		     (fun s t -> it:=!it+1;Printf.sprintf "%s**t%i:**\n%s" s !it (S.pp t))
 		     (Printf.sprintf "Disjunction: t1 /\ ... /\ t%i\n" (List.length l))
 		     l
-	     | Top -> 
+	     | D_Top -> 
 		 "Top\n"
 	 in
 	   Printf.sprintf 
 	     "*****-------Print DOMAIN --------*****\n%s" s
 
-     end: DOMAIN) 
+     end
+
+module S = MAKE_SL_DOMAIN(DLList)
+
+let g = S.G.empty
+let p = S.P.empty
+let p = S.P.add_neq 2 0 p
+
+let g = S.G.add_edge 1 Zero 2 g
+let g = S.G.add_inductive 2 {target=3; source_parameters=[0]; target_parameters=[4]; length=0} g
+let g = S.G.add_edge 3 (RecordField ("prev", Zero)) 4 g
+
+let t: S.t = S.mk g p
+
+module D = MAKE_DOMAIN(S)
+
+let x={var_name="x"; var_type=PointerTo(Struct "dll"); var_uniqueId=1;}
+
+let l = D.get_sc_hvalue (Deffer(FieldAccess("next",Deffer(Var x)))) 1 [] t
+
+let _ = 
+  List.iter
+    (fun (t, i , o)-> Printf.printf "%i%s:\n%s" i (pp_offset o) (S.pp t)) l
+
+
