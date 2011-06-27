@@ -111,7 +111,7 @@ module MAKE_SL_DOMAIN =
 	     || List.exists (fun o -> G.has_edge i o g) D.domain_offset in
 	 let b_result = P.is_bottom p || G.for_all check_node g in
 	   if debug && b_result then print_debug "SL_DOMAIN: is t bottom?.....Yes\n"; 
-	   if debug && not b_result then print_debug "SL_DOMAIN: is t bottom?.....Yes\n";b_result
+	   if debug && not b_result then print_debug "SL_DOMAIN: is t bottom?.....No\n";b_result
 	   
        let malloc: offset list -> t -> int*t = fun ol (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: malloc [%s ]...\n" 

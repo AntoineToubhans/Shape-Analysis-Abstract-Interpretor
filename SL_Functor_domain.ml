@@ -55,8 +55,7 @@ module MAKE_DOMAIN =
 	   | Top -> top
 	   | Split(b, i) ->
 	       let t1, t2 = catch_split b i t in
-		 disjunction (reduce_equalities t1) (reduce_equalities t1)	  
-	  
+		 disjunction (reduce_equalities t1) (reduce_equalities t1)	   
 
        let rec get_sc_hvalue: sc_hvalue -> int -> offset list -> S.t -> (S.t * int * offset) list = fun e i l t ->
 	 if debug then print_debug "DOMAIN: [rec] get_sc_value %s\n" (sc_hvalue2str e);
@@ -76,7 +75,16 @@ module MAKE_DOMAIN =
 	   | Split (b, j) ->
 	       if debug then print_debug "DOMAIN: Split(%b, %i) caugth **\n" b j;
 	       let t1, t2 = catch_split b j t in 
-		 List.append (get_sc_hvalue e i l t1) (get_sc_hvalue e i l t2)
+	       let t1 = reduce_equalities t1 and t2 = reduce_equalities t2 in
+		 match t1, t2 with
+		   | D_Top, _ | _, D_Top -> 
+		       raise Top (* this should not happen *)
+		   | Disjunction lt1, Disjunction lt2 ->
+		       let ffold = fun res t ->
+			 if S.is_bottom t then res else 
+			   List.append res (get_sc_hvalue e i l t) in
+			 List.fold_left ffold 
+			   (List.fold_left ffold [] lt1) lt2
 
        let mutation: offset list -> int -> int -> sc_assignment -> t -> t = fun l i j assign t -> t
 
@@ -103,11 +111,12 @@ module S = MAKE_SL_DOMAIN(DLList)
 
 let g = S.G.empty
 let p = S.P.empty
-let p = S.P.add_neq 2 0 p
+let p = S.P.add_neq 2 4 p
 
 let g = S.G.add_edge 1 Zero 2 g
-let g = S.G.add_inductive 2 {target=3; source_parameters=[0]; target_parameters=[4]; length=0} g
-let g = S.G.add_edge 3 (RecordField ("prev", Zero)) 4 g
+let g = S.G.add_inductive 2 {target=3; source_parameters=[0]; target_parameters=[5]; length=0} g
+let g = S.G.add_inductive 3 {target=4; source_parameters=[5]; target_parameters=[6]; length=0} g
+let g = S.G.add_edge 4 (RecordField ("prev", Zero)) 6 g
 
 let t: S.t = S.mk g p
 
