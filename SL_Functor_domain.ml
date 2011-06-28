@@ -128,21 +128,33 @@ module MAKE_DOMAIN =
 		 t, List.map (fun (j, o)-> j) l_io 
 		
        let mutation: offset list -> offset list -> int -> int -> sc_assignment -> t -> t = 
-	 fun l_offset_mut l_offset_if_malloc i j (e1, e2) t -> 
-	   if debug then print_debug "DOMAIN: mutation %s\n" (sc_assignment2str (e1, e2));	 
-	   match t with
-	     | D_Top -> D_Top
-	     | Disjunction l_t ->
-		 
-
-	   match e2 with
-	     | HValue e2 ->
-		 t
-	     | VValue e2 ->
-(*		 let l_t2 = get_sc_vvalue e2 j l_offset_if_malloc t in*)
-		   t
-		 
-
+	 fun l_offset_mut l_o_malloc i j (la, ra) t -> 
+	   if debug then print_debug "DOMAIN: mutation %s\n" (sc_assignment2str (la, ra));	 
+	   let t, in_mut = 
+	     match ra with
+	       | HValue e -> 
+		   let t, l_io = get_sc_hvalue e j t in
+		     List.fold_left
+		       (fun (t, l) o -> 
+			  let t, li = search t (List.map (fun (i,oo)->i, appendOffset o oo) l_io) in
+			    t, List.map2 (fun x y -> x::y) li l)
+		       (t, (List.map (fun _->[]) l_io)) l_offset_mut
+	       | VValue e -> 
+		   let t, l_i = get_sc_vvalue e j l_o_malloc t in
+		     t, List.map (fun x->[x]) l_i in
+	   let t, l_io = get_sc_hvalue la i t in
+	     match t with
+	       | D_Top -> D_Top
+	       | Disjunction l_t -> 
+		   Disjunction 
+		     (List.map2 
+			(fun (t, (i, oo)) li ->
+			   List.fold_left2
+			     (fun t o j -> S.mutate i oo j t)
+			     t l_offset_mut li) 
+			(List.combine l_t l_io) in_mut)    
+		
+		   
        let filter: int -> int -> sc_cond -> t -> t = fun i j cond t -> t
 
        let pp: t -> string = fun t -> 
@@ -180,12 +192,13 @@ module D = MAKE_DOMAIN(S)
 let t: D.t = D.Disjunction [t]
 
 let x={var_name="x"; var_type=PointerTo(Struct "dll"); var_uniqueId=1;}
+let a: sc_assignment = Var x, HValue (FieldAccess("next",Deref(Var x)))
 
-let t, lio = D.get_sc_hvalue (Deref(FieldAccess("next",Deref(Var x)))) 1 t
+let t = D.mutation 
+  [RecordField("next", Zero);RecordField("prev", Zero);RecordField("top", Zero)]
+  [] 1 1 a t
 
 let _ = 
-  List.iter (fun (i, o) -> Printf.printf "%i%s " i (pp_offset o)) lio;
-  Printf.printf "\n";
   Printf.printf "%s" (D.pp t)
 
 
