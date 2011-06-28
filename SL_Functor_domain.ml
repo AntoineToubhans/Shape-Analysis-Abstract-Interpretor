@@ -44,48 +44,58 @@ module MAKE_DOMAIN =
        let catch_split b i t = 
 	 if b then S.case_inductive_forward i t else S.case_inductive_backward i t
 
-       let rec reduce_equalities: S.t -> t = fun t ->
-	 if debug then print_debug "DOMAIN: [rec] reduce_equalities \n";
+       (* reduce_equalities i t ---> [i1;...;in], t1/\.../\tn *)
+       let rec reduce_equalities: int -> S.t -> (int list)*t = fun i t ->
+ 	 if debug then print_debug "DOMAIN: [rec] reduce_equalities \n";
 	 try
-	   match S.reduce_equalities_one_step t with
-	     | None -> Disjunction [t]
-	     | Some t -> reduce_equalities t
+	   match S.reduce_equalities_one_step t i with
+	     | _, None -> [i], Disjunction [t]
+	     | ii, Some t -> reduce_equalities ii t
 	 with
-	   | Bottom -> bottom
-	   | Top -> top
+	   | Bottom -> [], bottom
+	   | Top -> [], top
 	   | Split(b, i) ->
 	       let t1, t2 = catch_split b i t in
-		 disjunction (reduce_equalities t1) (reduce_equalities t1)	   
+	       let li1, lt1 = reduce_equalities i t1 and li2, lt2 = reduce_equalities i t2 in 
+		 List.append li1 li2, disjunction lt1 lt2	   
 
        let rec get_sc_hvalue: sc_hvalue -> int -> offset list -> S.t -> (S.t * int * offset) list = fun e i l t ->
-	 if debug then print_debug "DOMAIN: [rec] get_sc_value %s\n" (sc_hvalue2str e);
-	 try
-	   match e with
-	     | Var _ -> 
-		 [(t, i, Zero)]
-	     | ArrayAccess(k, e) ->
-		 List.map (fun (t, j, o) -> (t, j , ArrayRange(k, o))) (get_sc_hvalue e i l t)
-	     | FieldAccess(f, e) ->
-		 List.map (fun (t, j, o) -> (t, j , RecordField(f, o))) (get_sc_hvalue e i l t)
-	     | Deffer e ->
-		 List.map (fun (t, j, o) -> let j, t = S.search j o t in (t, j, Zero)) (get_sc_hvalue e i l t)
-	     | Malloc size ->	       
-		 let j, t = S.malloc l t in [(t, j, Zero)]
-	 with
-	   | Split (b, j) ->
-	       if debug then print_debug "DOMAIN: Split(%b, %i) caugth **\n" b j;
-	       let t1, t2 = catch_split b j t in 
-	       let t1 = reduce_equalities t1 and t2 = reduce_equalities t2 in
-		 match t1, t2 with
-		   | D_Top, _ | _, D_Top -> 
-		       raise Top (* this should not happen *)
-		   | Disjunction lt1, Disjunction lt2 ->
-		       let ffold = fun res t ->
-			 if S.is_bottom t then res else 
-			   List.append res (get_sc_hvalue e i l t) in
-			 List.fold_left ffold 
-			   (List.fold_left ffold [] lt1) lt2
-
+	 if debug then print_debug "DOMAIN: [rec] get_sc_value %s\n" (sc_hvalue2str e);	 
+	 match e with
+	   | Var _ -> 
+	       [(t, i, Zero)]
+	   | ArrayAccess(k, e) ->
+	       List.map (fun (t, j, o) -> (t, j , ArrayRange(k, o))) (get_sc_hvalue e i l t)
+	   | FieldAccess(f, e) ->
+	       List.map (fun (t, j, o) -> (t, j , RecordField(f, o))) (get_sc_hvalue e i l t)
+	   | Deffer e ->
+	       let lrec = ref (get_sc_hvalue e i l t) and lres = ref [] in
+		 while !lrec != [] do
+		   let t, j, o = List.hd !lrec in
+		     lrec:= List.tl !lrec;
+		     try
+		       let j, t = S.search j o t in 
+		       let lj, t = reduce_equalities j t in
+			 match t with
+			   | D_Top -> raise Top (* this should not happen *)
+			   | Disjunction lt ->
+			       List.iter2 (fun t j -> lres:= (t, j, Zero)::(!lres)) lt lj 
+		     with
+		       | Split (b, k) ->
+			   if debug then print_debug "DOMAIN: Split(%b, %i) caugth **\n" b j;
+			   let t1, t2 = catch_split b k t in 
+			   let lj1, t1 = reduce_equalities j t1 and lj2, t2 = reduce_equalities j t2 in
+			     match t1, t2 with
+			       | D_Top, _ | _, D_Top -> 
+				   raise Top (* this should not happen *)
+			       | Disjunction lt1, Disjunction lt2 ->
+				   lrec:= List.append 
+				     (List.map2 (fun t j ->(t, j, o)) lt1 lj1) 
+				     (List.append (List.map2 (fun t j->(t, j, o)) lt2 lj2) !lrec);
+		 done; !lres
+	   | Malloc size ->	       
+	       let j, t = S.malloc l t in [(t, j, Zero)] 
+					    
        let mutation: offset list -> int -> int -> sc_assignment -> t -> t = fun l i j assign t -> t
 
        let filter: int -> int -> sc_cond -> t -> t = fun i j cond t -> t

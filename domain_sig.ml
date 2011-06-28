@@ -124,8 +124,8 @@ module type SL_DOMAIN =
     type t
     val empty: t
 
-    val fusion: int -> int -> t -> t 
-    val reduce_equalities_one_step: t -> t option
+    val fusion: int -> int -> t -> t*bool 
+    val reduce_equalities_one_step: t -> int -> int *t option
 
     (* under-approximation of bottom *)
     (*      is_bottom t => t=_|_     *)

@@ -42,16 +42,18 @@ module MAKE_SL_DOMAIN =
 	   | Invalid_argument _ ->	   
 	       error (Printf.sprintf "can not nullify inductive from %i: ill-formed inductive" i)
 		 
-       let fusion: int -> int -> t -> t = fun i j (g, p) ->
+       (* fusion i j t gets t true means i was deleted *)
+       (* fusion i j t gets t false means j was deleted*)
+       let fusion: int -> int -> t -> t*bool = fun i j (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: fusion %i %i t\n" i j;
 	 if (i==0 && G.has_edges j g)||(j==0 && G.has_edges i g) then raise Bottom;
 	 if P.is_live i p && P.is_live j p && i!=j then raise Bottom; 
 	 let opt_ind_i = G.get_inductive i g and opt_ind_j = G.get_inductive j g
 	 and do_fusion i j g p = 
-	   if P.is_live j p then G.fusion i j g, P.check_bottom (P.fusion i j p) 
-	   else G.fusion j i g, P.check_bottom (P.fusion j i p) 
+	   if P.is_live j p then (G.fusion i j g, P.check_bottom (P.fusion i j p)), true 
+	   else (G.fusion j i g, P.check_bottom (P.fusion j i p)), false 
 	 in
-	   if i==j then g, p else  
+	   if i==j then (g, p), true else  
 	     match opt_ind_i, opt_ind_j, i, j with
 	       | Some ind_i, Some ind_j, _, _ ->
 		   if ind_i.length>0 && ind_j.length>0 then raise Bottom;
@@ -78,27 +80,28 @@ module MAKE_SL_DOMAIN =
 		   do_fusion i j g p
 		  
 	     	     
-       let reduce_equalities_one_step: t -> t option = fun (g, p) ->
+       let reduce_equalities_one_step: t -> int -> int* t option = fun (g, p) k ->
 	 if debug then print_debug "SL_DOMAIN: reduce_equalities_one_step t...\n";
 	 let rp = ref p in
 	   match P.pop_equality rp with
 	     | Some (i, j) ->
-		 Some(fusion i j (g, !rp))
-	     | None -> None
-
+		 let t, b = fusion i j (g, !rp) in
+		   (if b && k==i then j else if not b && k==j then i else k), Some(t)
+	     | None -> k, None
+(*
        let reduce_equalities: t -> t = fun (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: reduce_equalities t...\n";
 	 let rg = ref g and rp = ref p in
 	 let eq = ref (P.pop_equality rp) in
 	   while has !eq do
 	     let i, j = get !eq in
-	     let t = fusion i j (!rg, !rp) in
+	     let t, _ = fusion i j (!rg, !rp) in
 	       rg:= fst t; rp:= snd t;
 	       eq:= P.pop_equality rp
 	   done;
 	   if debug then print_debug "SL_DOMAIN: egalities reduced...\n";
 	   !rg, !rp
-      
+*)    
        (* So far, is_bottom checks:               *)
        (*  - conflict between inductive and edges *)
        (*  - is_bottom over predicates            *)
