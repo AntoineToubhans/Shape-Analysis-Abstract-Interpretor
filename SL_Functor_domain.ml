@@ -91,35 +91,6 @@ module MAKE_DOMAIN =
        let search: t -> (int * offset) list -> t * int list = fun t l_io ->
 	 if debug then print_debug "DOMAIN: search.....\n";
 	 aux_search t l_io bottom []
-(*	 match t with
-	   | D_Top -> D_Top, []
-	   | Disjunction l_t ->
-	       let rl_t = ref l_t and rl_io = ref l_io and res = ref (bottom, []) in
-		 while !rl_t != [] && !rl_io != [] do
-		   let t = List.hd !rl_t and i, o = List.hd !rl_io and t_res, l_res = !res in
-		     rl_t:= List.tl !rl_t; 
-		     rl_io:= List.tl !rl_io;
-		     try
-		       let j, t = S.search i o t in 
-		       let lj, t = reduce_equalities [j] t in
-			 res:= disjunction t_res t, List.append l_res lj;		
-		     with
-		       | Top ->
-			   rl_t:=[];
-			   rl_io:= [];
-			   res:= top, [];
-		       | Split (b, k) ->
-			   if debug then print_debug "DOMAIN: Split(%b, %i) caugth **\n" b j;
-			   let t1, t2 = catch_split b k t in 
-			   let lj1, t1 = reduce_equalities [j] t1 and lj2, t2 = reduce_equalities [j] t2 in
-			     match t1, t2 with
-			       | D_Top, _ | _, D_Top -> 
-				   raise Top (* this should not happen *)
-			       | Disjunction lt1, Disjunction lt2 ->
-				   lrec:= List.append 
-				     (List.map2 (fun t j ->(t, List.hd j, o)) lt1 lj1) 
-				     (List.append (List.map2 (fun t j->(t, List.hd j, o)) lt2 lj2) !lrec);
-		 done; !lres*)
 
 
        let rec get_sc_hvalue: sc_hvalue -> int -> t -> t * (int * offset) list = fun e i t ->
@@ -138,41 +109,6 @@ module MAKE_DOMAIN =
 	       let t, l_i = search t l_io in
 		 t, List.map (fun j -> j, Zero) l_i	    
 
-
-(*       let rec get_sc_hvalue: sc_hvalue -> int -> S.t -> (S.t * int * offset) list = fun e i t ->
-	 if debug then print_debug "DOMAIN: [rec] get_sc_hvalue %s\n" (sc_hvalue2str e);	 
-	 match e with
-	   | Var _ -> 
-	       [(t, i, Zero)]
-	   | ArrayAccess(k, e) ->
-	       List.map (fun (t, j, o) -> (t, j , ArrayRange(k, o))) (get_sc_hvalue e i t)
-	   | FieldAccess(f, e) ->
-	       List.map (fun (t, j, o) -> (t, j , RecordField(f, o))) (get_sc_hvalue e i t)
-	   | Deref e ->
-	       let lrec = ref (get_sc_hvalue e i t) and lres = ref [] in
-		 while !lrec != [] do
-		   let t, j, o = List.hd !lrec in
-		     lrec:= List.tl !lrec;
-		     try
-		       let j, t = S.search j o t in 
-		       let lj, t = reduce_equalities [j] t in
-			 match t with
-			   | D_Top -> raise Top (* this should not happen *)
-			   | Disjunction lt ->
-			       List.iter2 (fun t j -> lres:= (t, List.hd j, Zero)::(!lres)) lt lj 
-		     with
-		       | Split (b, k) ->
-			   if debug then print_debug "DOMAIN: Split(%b, %i) caugth **\n" b j;
-			   let t1, t2 = catch_split b k t in 
-			   let lj1, t1 = reduce_equalities [j] t1 and lj2, t2 = reduce_equalities [j] t2 in
-			     match t1, t2 with
-			       | D_Top, _ | _, D_Top -> 
-				   raise Top (* this should not happen *)
-			       | Disjunction lt1, Disjunction lt2 ->
-				   lrec:= List.append 
-				     (List.map2 (fun t j ->(t, List.hd j, o)) lt1 lj1) 
-				     (List.append (List.map2 (fun t j->(t, List.hd j, o)) lt2 lj2) !lrec);
-		 done; !lres *)
 	
        let get_sc_vvalue: sc_vvalue -> int -> offset list -> t -> t * int list = fun e i l_o_malloc t ->
 	 if debug then print_debug "DOMAIN: get_sc_vvalue %s\n" (sc_vvalue2str e);	 
