@@ -80,14 +80,14 @@ module MAKE_SL_DOMAIN =
 		   do_fusion i j g p
 		  
 	     	     
-       let reduce_equalities_one_step: t -> int -> int* t option = fun (g, p) k ->
+       let reduce_equalities_one_step: t -> int list -> int list * t option = fun (g, p) l_pt ->
 	 if debug then print_debug "SL_DOMAIN: reduce_equalities_one_step t...\n";
 	 let rp = ref p in
 	   match P.pop_equality rp with
 	     | Some (i, j) ->
 		 let t, b = fusion i j (g, !rp) in
-		   (if b && k==i then j else if not b && k==j then i else k), Some(t)
-	     | None -> k, None
+		   List.map (fun k->(if b && k==i then j else if not b && k==j then i else k)) l_pt, Some(t)
+	     | None -> l_pt, None
 (*
        let reduce_equalities: t -> t = fun (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: reduce_equalities t...\n";

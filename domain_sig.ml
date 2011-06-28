@@ -125,7 +125,7 @@ module type SL_DOMAIN =
     val empty: t
 
     val fusion: int -> int -> t -> t*bool 
-    val reduce_equalities_one_step: t -> int -> int *t option
+    val reduce_equalities_one_step: t -> int list -> int list *t option
 
     (* under-approximation of bottom *)
     (*      is_bottom t => t=_|_     *)
@@ -167,7 +167,7 @@ module type SL_DOMAIN =
 (*      -> i===_===> k===1===> j *)
 exception Split of bool*int
  
-module type DOMAIN = 
+module type DIS_DOMAIN = 
   sig
 
     type t   

@@ -45,23 +45,23 @@ module MAKE_DOMAIN =
 	 if b then S.case_inductive_forward i t else S.case_inductive_backward i t
 
        (* reduce_equalities i t ---> [i1;...;in], t1/\.../\tn *)
-       let rec reduce_equalities: int -> S.t -> (int list)*t = fun i t ->
+       let rec reduce_equalities: int list -> S.t -> int list list * t = fun l_pt t ->
  	 if debug then print_debug "DOMAIN: [rec] reduce_equalities \n";
 	 try
-	   match S.reduce_equalities_one_step t i with
-	     | _, None -> [i], Disjunction [t]
-	     | ii, Some t -> reduce_equalities ii t
+	   match S.reduce_equalities_one_step t l_pt with
+	     | _, None -> [l_pt], Disjunction [t]
+	     | l_pt, Some t -> reduce_equalities l_pt t
 	 with
 	   | Bottom -> [], bottom
 	   | Top -> [], top
 	   | Split(b, i) ->
 	       let t1, t2 = catch_split b i t in
-	       let li1, lt1 = reduce_equalities i t1 and li2, lt2 = reduce_equalities i t2 in 
-		 List.append li1 li2, disjunction lt1 lt2	   
+	       let ll_pt1, lt1 = reduce_equalities l_pt t1 and ll_pt2, lt2 = reduce_equalities l_pt t2 in 
+		 List.append ll_pt1 ll_pt2, disjunction lt1 lt2	   
 
 
        let rec get_sc_hvalue: sc_hvalue -> int -> S.t -> (S.t * int * offset) list = fun e i t ->
-	 if debug then print_debug "DOMAIN: [rec] get_sc_value %s\n" (sc_hvalue2str e);	 
+	 if debug then print_debug "DOMAIN: [rec] get_sc_hvalue %s\n" (sc_hvalue2str e);	 
 	 match e with
 	   | Var _ -> 
 	       [(t, i, Zero)]
@@ -76,26 +76,27 @@ module MAKE_DOMAIN =
 		     lrec:= List.tl !lrec;
 		     try
 		       let j, t = S.search j o t in 
-		       let lj, t = reduce_equalities j t in
+		       let lj, t = reduce_equalities [j] t in
 			 match t with
 			   | D_Top -> raise Top (* this should not happen *)
 			   | Disjunction lt ->
-			       List.iter2 (fun t j -> lres:= (t, j, Zero)::(!lres)) lt lj 
+			       List.iter2 (fun t j -> lres:= (t, List.hd j, Zero)::(!lres)) lt lj 
 		     with
 		       | Split (b, k) ->
 			   if debug then print_debug "DOMAIN: Split(%b, %i) caugth **\n" b j;
 			   let t1, t2 = catch_split b k t in 
-			   let lj1, t1 = reduce_equalities j t1 and lj2, t2 = reduce_equalities j t2 in
+			   let lj1, t1 = reduce_equalities [j] t1 and lj2, t2 = reduce_equalities [j] t2 in
 			     match t1, t2 with
 			       | D_Top, _ | _, D_Top -> 
 				   raise Top (* this should not happen *)
 			       | Disjunction lt1, Disjunction lt2 ->
 				   lrec:= List.append 
-				     (List.map2 (fun t j ->(t, j, o)) lt1 lj1) 
-				     (List.append (List.map2 (fun t j->(t, j, o)) lt2 lj2) !lrec);
+				     (List.map2 (fun t j ->(t, List.hd j, o)) lt1 lj1) 
+				     (List.append (List.map2 (fun t j->(t, List.hd j, o)) lt2 lj2) !lrec);
 		 done; !lres
 	
        let get_sc_vvalue: sc_vvalue -> int -> offset list -> S.t -> (S.t * int) list = fun e i l t ->
+	 if debug then print_debug "DOMAIN: get_sc_vvalue %s\n" (sc_vvalue2str e);	 
 	 match e with
 	   | FloatConst _ | IntConst _ ->
 	       let j, t = S.create_fresh_node t in [t, j]
@@ -106,12 +107,16 @@ module MAKE_DOMAIN =
 	   | Address e ->
 	       List.map (fun (t, j, o)-> t, j) (get_sc_hvalue e i t) 
 				    
-       let mutation: offset list -> int -> int -> sc_assignment -> t -> t = fun l i j (e1, e2) t -> 
-	 match e2 with
-	   | HValue e2 ->
-	       t
-	   | VValue e2 ->
-	       t
+       let mutation: offset list -> offset list -> int -> int -> sc_assignment -> t -> t = 
+	 fun l_offset_mut l_offset_if_malloc i j (e1, e2) t -> 
+	   if debug then print_debug "DOMAIN: mutation %s\n" (sc_assignment2str (e1, e2));	 
+	   match e2 with
+	     | HValue e2 ->
+		 t
+	     | VValue e2 ->
+		 let l_t2 = get_sc_vvalue e2 j l_offset_if_malloc t in
+		   t
+		 
 
        let filter: int -> int -> sc_cond -> t -> t = fun i j cond t -> t
 
