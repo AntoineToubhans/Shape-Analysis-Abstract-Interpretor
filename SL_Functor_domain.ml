@@ -114,7 +114,7 @@ module MAKE_DOMAIN =
 	     | HValue e2 ->
 		 t
 	     | VValue e2 ->
-		 let l_t2 = get_sc_vvalue e2 j l_offset_if_malloc t in
+(*		 let l_t2 = get_sc_vvalue e2 j l_offset_if_malloc t in*)
 		   t
 		 
 
