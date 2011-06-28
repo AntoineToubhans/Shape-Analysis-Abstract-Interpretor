@@ -115,6 +115,11 @@ module MAKE_SL_DOMAIN =
 	 let b_result = P.is_bottom p || G.for_all check_node g in
 	   if debug && b_result then print_debug "SL_DOMAIN: is t bottom?.....Yes\n"; 
 	   if debug && not b_result then print_debug "SL_DOMAIN: is t bottom?.....No\n";b_result
+
+       let create_fresh_node: t -> int * t = fun (g, p) ->
+	 let i, g = G.create_fresh_node g in 
+	   if debug then print_debug "SL_DOMAIN: create_fresh_node...[%i]\n" i; 
+	   i, (g, p)
 	   
        let malloc: offset list -> t -> int*t = fun ol (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: malloc [%s ]...\n" 
@@ -236,13 +241,13 @@ module MAKE_SL_DOMAIN =
 	   else (* if............................................ *)
 	     raise Top
 
-       let mutate: int -> offset -> int -> offset -> t -> t = fun i o j o1 (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: mutate [%i%s := %i%s]\n" i (pp_offset o) j (pp_offset o1);
+       let mutate: int -> offset -> int -> t -> t = fun i o j (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: mutate [%i%s := %i]\n" i (pp_offset o) j;
 	 try 
-	   G.add_edge i o (get (G.get_edge j o1 g)) (G.remove_edge i o g), p
+	   G.add_edge i o j (G.remove_edge i o g), p
 	 with
 	   | _ ->
-	       error (Printf.sprintf "can not perform mutation [%i%s := %i%s]" i (pp_offset o) j (pp_offset o1))
+	       error (Printf.sprintf "can not perform mutation [%i%s := %i]" i (pp_offset o) j)
 
        (* attempt to fold at node i: produces either     *)
        (*  - Some t   if attempt was successful          *)

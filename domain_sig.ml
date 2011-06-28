@@ -131,6 +131,7 @@ module type SL_DOMAIN =
     (*      is_bottom t => t=_|_     *)
     val is_bottom: t -> bool
 
+    val create_fresh_node: t -> int * t
     val malloc: offset list -> t -> int*t
 
     val case_inductive_forward: int -> t -> t*t
@@ -140,10 +141,10 @@ module type SL_DOMAIN =
     val unfold: int -> t -> t 
 
     val search: int -> offset -> t -> int * t
-    (* mutate a o b o1 t                      *)
-    (* t MUST contains       a@o->c * b@o1->d *)
-    (* which's replaced by:  a@o->d * b@o1->d *)
-    val mutate: int -> offset -> int -> offset -> t -> t
+    (* mutate a o b t                *)
+    (* t MUST contains       a@o->c  *)
+    (* which's replaced by:  a@o->b  *)
+    val mutate: int -> offset -> int -> t -> t
 
     val try_fold: int -> t -> t option
     val try_modus_ponens: int -> (int -> bool) -> t -> t option

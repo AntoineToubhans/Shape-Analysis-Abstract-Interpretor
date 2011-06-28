@@ -59,17 +59,18 @@ module MAKE_DOMAIN =
 	       let li1, lt1 = reduce_equalities i t1 and li2, lt2 = reduce_equalities i t2 in 
 		 List.append li1 li2, disjunction lt1 lt2	   
 
-       let rec get_sc_hvalue: sc_hvalue -> int -> offset list -> S.t -> (S.t * int * offset) list = fun e i l t ->
+
+       let rec get_sc_hvalue: sc_hvalue -> int -> S.t -> (S.t * int * offset) list = fun e i t ->
 	 if debug then print_debug "DOMAIN: [rec] get_sc_value %s\n" (sc_hvalue2str e);	 
 	 match e with
 	   | Var _ -> 
 	       [(t, i, Zero)]
 	   | ArrayAccess(k, e) ->
-	       List.map (fun (t, j, o) -> (t, j , ArrayRange(k, o))) (get_sc_hvalue e i l t)
+	       List.map (fun (t, j, o) -> (t, j , ArrayRange(k, o))) (get_sc_hvalue e i t)
 	   | FieldAccess(f, e) ->
-	       List.map (fun (t, j, o) -> (t, j , RecordField(f, o))) (get_sc_hvalue e i l t)
-	   | Deffer e ->
-	       let lrec = ref (get_sc_hvalue e i l t) and lres = ref [] in
+	       List.map (fun (t, j, o) -> (t, j , RecordField(f, o))) (get_sc_hvalue e i t)
+	   | Deref e ->
+	       let lrec = ref (get_sc_hvalue e i t) and lres = ref [] in
 		 while !lrec != [] do
 		   let t, j, o = List.hd !lrec in
 		     lrec:= List.tl !lrec;
@@ -93,10 +94,24 @@ module MAKE_DOMAIN =
 				     (List.map2 (fun t j ->(t, j, o)) lt1 lj1) 
 				     (List.append (List.map2 (fun t j->(t, j, o)) lt2 lj2) !lrec);
 		 done; !lres
-	   | Malloc size ->	       
-	       let j, t = S.malloc l t in [(t, j, Zero)] 
-					    
-       let mutation: offset list -> int -> int -> sc_assignment -> t -> t = fun l i j assign t -> t
+	
+       let get_sc_vvalue: sc_vvalue -> int -> offset list -> S.t -> (S.t * int) list = fun e i l t ->
+	 match e with
+	   | FloatConst _ | IntConst _ ->
+	       let j, t = S.create_fresh_node t in [t, j]
+	   | Null ->
+	       [t, 0]
+	   | Malloc _ ->	       
+	       let j, t = S.malloc l t in [(t, j)] 
+	   | Address e ->
+	       List.map (fun (t, j, o)-> t, j) (get_sc_hvalue e i t) 
+				    
+       let mutation: offset list -> int -> int -> sc_assignment -> t -> t = fun l i j (e1, e2) t -> 
+	 match e2 with
+	   | HValue e2 ->
+	       t
+	   | VValue e2 ->
+	       t
 
        let filter: int -> int -> sc_cond -> t -> t = fun i j cond t -> t
 
@@ -134,7 +149,7 @@ module D = MAKE_DOMAIN(S)
 
 let x={var_name="x"; var_type=PointerTo(Struct "dll"); var_uniqueId=1;}
 
-let l = D.get_sc_hvalue (Deffer(FieldAccess("next",Deffer(Var x)))) 1 [] t
+let l = D.get_sc_hvalue (Deref(FieldAccess("next",Deref(Var x)))) 1 t
 
 let _ = 
   List.iter

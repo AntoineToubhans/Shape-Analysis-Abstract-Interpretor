@@ -25,10 +25,10 @@ and sc_hvalue = (*heap value*)
   | Var of sc_var
   | ArrayAccess of sc_array_i*sc_hvalue
   | FieldAccess of sc_record_field*sc_hvalue
-  | Deffer of sc_hvalue
-  | Malloc of int
+  | Deref of sc_hvalue
 
 and sc_vvalue = (*virtual value*)
+  | Malloc of int
   | Address of sc_hvalue
   | FloatConst of float
   | IntConst of int
@@ -92,13 +92,13 @@ let rec sc_hvalue2str_aux(e: sc_hvalue) = (* to deal with parentethis (*x).f & *
 	    Printf.sprintf "(%s).%s" (fst (sc_hvalue2str_aux e)) f, false
 	  else
 	    Printf.sprintf "%s.%s" (fst (sc_hvalue2str_aux e)) f, false
-    | Deffer e -> Printf.sprintf "*%s" (fst (sc_hvalue2str_aux e)), true
-    | Malloc n -> Printf.sprintf "malloc(%i)" n, false
+    | Deref e -> Printf.sprintf "*%s" (fst (sc_hvalue2str_aux e)), true
 
 let sc_hvalue2str(e: sc_hvalue) = fst (sc_hvalue2str_aux e)
 
 let sc_vvalue2str(e: sc_vvalue) = 
   match e with
+    | Malloc n -> Printf.sprintf "malloc(%i)" n
     | Address e -> Printf.sprintf "&%s" (sc_hvalue2str e)
     | FloatConst x -> Printf.sprintf "%f" x
     | IntConst i -> Printf.sprintf "%i" i
@@ -150,11 +150,11 @@ let rc={var_name="rc"; var_type=PointerTo(Struct "dll"); var_uniqueId=1;}
 let ldecl=(l, None)
 let rcdecl=(rc, Some(HValue(Malloc 42)))
 
-let ass=(Deffer(Var rc),HValue(Var l))
+let ass=(Deref(Var rc),HValue(Var l))
 
 let c=Neq(HValue(Var rc), VValue Null)
 
-let assw=(Var rc, HValue(FieldAccess("next", Deffer(Var rc))))
+let assw=(Var rc, HValue(FieldAccess("next", Deref(Var rc))))
 
 let w=While(c, [Assignment assw])
 
