@@ -6,8 +6,6 @@ OCAMLLEX=       $(OCAMLPREFIX)ocamllex
 OCAMLDEP=       $(OCAMLPREFIX)ocamldep
 OCAMLINCLUDES=
 OCAMLFLAGS=     -warn-error a $(OCAMLINCLUDES)
-OCAMLC=         $(OCAMLPREFIX)ocamlc
-OCAMLOPT=       $(OCAMLPREFIX)ocamlopt.opt
 %.ml: %.mll
 	$(OCAMLLEX) $*.mll
 %.ml %.mli: %.mly
@@ -23,26 +21,20 @@ OCAMLOPT=       $(OCAMLPREFIX)ocamlopt.opt
 %.cmx: %.ml
 	$(OCAMLOPT) $(OCAMLFLAGS) -c $*.ml
 all: analyzer
-AUTOGEN_ML=	
-AUTOGEN_MLI=    
-AUTOGEN= $(AUTOGEN_ML) $(AUTOGEN_MLI)
 ML_FILES=	simple_C_syntax.ml \
 		utils.ml \
 		offset.ml \
 		domain_sig.ml \
-		concrete_domain.ml \
-		TVLA_domain.ml \
+		inductive_def.ml \
+		neq_pred_domain.ml \
+		SL_graph_domain.ml \
 		SL_domain.ml \
-		environment.ml 		
-CMO_FILES=	$(ML_FILES:%.ml=%.cmo)
+		SL_Functor_domain.ml		
 CMX_FILES=      $(ML_FILES:%.ml=%.cmx)
-analyzer: $(CMX_FILES) $(AUTOGEN)
+analyzer: $(CMX_FILES) 
 	ocamlopt $(CMX_FILES) -o analyzer
-
-depend: $(AUTOGEN_ML) $(ML_FILES)
-	ocamldep $(OCAMLINCLUDES) *.mli *.ml */*.mli */*.ml > depend
 clean: 
-	rm -f *.cmo *.cmi *.cmx */*.cmi */*.cmo */*.cmx && \
-	rm -f *.o $(AUTOGEN_ML) $(AUTOGEN_MLI) analyzer depend *~ \
-	rm -r *.output
-include depend
+	rm -f *.cmi *.cmx *.o && \
+	rm -f analyzer depend *~ debug.log \
+
+
