@@ -42,6 +42,17 @@ module MAKE_SL_DOMAIN =
 	   | Invalid_argument _ ->	   
 	       error (Printf.sprintf "can not nullify inductive from %i: ill-formed inductive" i)
 		 
+       let request_eq: int -> int -> t -> t = fun i j (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: request_eq %i %i t\n" i j;
+	 if i!=j then
+	   g, P.add_eq i j p
+	 else
+	   g, p
+
+       let request_neq: int -> int -> t -> t = fun i j (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: request_neq %i %i t\n" i j;
+	 g, P.check_bottom (P.add_neq i j p)    
+
        (* fusion i j t gets t true means i was deleted *)
        (* fusion i j t gets t false means j was deleted*)
        let fusion: int -> int -> t -> t*bool = fun i j (g, p) ->

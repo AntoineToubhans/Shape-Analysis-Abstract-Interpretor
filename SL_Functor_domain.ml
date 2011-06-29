@@ -257,14 +257,66 @@ module MAKE_DIS_DOMAIN =
 			     (fun t oo j -> S.mutate i oo j t)
 			     t l_offset_mut l)
 			l_t l_i in_mut)		
-		   
-       let filter: int -> int -> sc_cond -> t -> t*t = fun i j cond t -> 
+      
+(*       let aux_filter: (int*int) list list -> t -> t*t = fun l t -> 
+	 if debug then print_debug "DOMAIN: perform filtering....[%s]\n"
+	   (List.fold_left (fun s l -> s) "" l);
+	 match t with
+	   | D_Top -> top, top
+	   | Disjunction l_t ->
+	       List.fold_left2 
+		 (fun (t1, t2) tt l_ij ->
+		    List.fold_left
+		      (fun (tt1, tt2) (i, j) -> S.request_eq i j tt1, S.request 
+		    let tt1 = S.request_eq i j tt and tt2 = S.request_neq i j tt in
+		    let _, tt1 = reduce_equalities [] tt1 
+		    and _, tt2 = reduce_equalities [] tt2 in
+		      disjunction t1 tt1, disjunction t2 tt2)
+		 (bottom, bottom) l_t l
+*)
+
+       let filter: offset list -> int -> int -> sc_cond -> t -> t*t = fun l_o i j cond t -> 
 	 if debug then print_debug "DOMAIN: filter %s\n" (sc_cond2str cond);	 
 	 let  b, e1, e2 = 
 	   match cond with
 	     | Eq(e1, e2) -> true, e1, e2
 	     | Neq(e1, e2) -> false, e1, e2 in
-	   t, t
+	   match e1, e2 with
+	     | HValue e1, HValue e2 -> t, t
+	     | HValue e1, VValue e2 | VValue e2, HValue e1 -> t, t
+	     | VValue e1, VValue e2 ->
+		 begin
+		   match e1, e2 with
+		     | IntConst x, IntConst y ->
+			 if (x=y && b) || (x<>y && not b) then t, bottom else bottom, t
+		     | FloatConst x, FloatConst y -> 
+			 if (x=y && b) || (x<>y && not b) then t, bottom else bottom, t
+		     | Null, Null ->
+			 if b then t, bottom else bottom, t
+		     | Address e1, Address e2 -> 
+			 begin
+			   let t, l_i, oi = get_sc_hvalue e1 i t in
+			   let t, l_j, oj, l = get_sc_hvalue2 e2 j t (List.map (fun i->[i]) l_i) in
+			   let l_ij = List.map2 (fun li j -> List.hd li, j) l l_j in
+			     match t with
+			       | D_Top -> top, top
+			       | Disjunction l_t ->
+				   List.fold_left2 
+				     (fun (t1, t2) tt (i, j) -> 
+					let tt1 = S.request_eq i j tt and tt2 = S.request_neq i j tt in
+					let _, tt1 = reduce_equalities [] tt1 
+					and _, tt2 = reduce_equalities [] tt2 in
+					  disjunction t1 tt1, disjunction t2 tt2)
+				     (bottom, bottom) l_t l_ij
+			 end
+		     | _ -> 
+			 error (Printf.sprintf "Inconsistent condition %s" (sc_cond2str cond))
+		 end
+ (* | Malloc of int
+  | Address of sc_hvalue
+  | FloatConst of float
+  | IntConst of int
+  | Null*)
 
 
        let pp: t -> string = fun t -> 
@@ -288,8 +340,8 @@ module S = MAKE_SL_DOMAIN(DLList)
 
 let g = S.G.empty
 let p = S.P.empty
-let p = S.P.add_neq 3 4 p
-let p = S.P.add_neq 2 3 p
+
+let p = S.P.add_neq 2 4 p
 
 let g = S.G.add_edge 1 Zero 2 g
 let g = S.G.add_inductive 2 {target=3; source_parameters=[0]; target_parameters=[5]; length=0} g
@@ -308,9 +360,10 @@ let a2: sc_assignment = Deref (Var x), HValue (Deref(FieldAccess("next",Deref(Va
 
 let fields = [RecordField("next", Zero);RecordField("prev", Zero);RecordField("top", Zero)]
 
-let t = D.mutation fields [] 1 1 a2 t
+let t1 = D.mutation [Zero] [] 1 1 a t
 
 let _ = 
-  Printf.printf "%s" (D.pp t)
+  Printf.printf "%s" (D.pp t);
+  Printf.printf "%s" (D.pp t1)
 
 

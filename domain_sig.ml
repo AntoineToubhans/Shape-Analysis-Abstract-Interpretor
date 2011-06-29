@@ -124,6 +124,9 @@ sig
     type t
     val empty: t
 
+    val request_eq: int -> int -> t -> t
+    val request_neq: int -> int -> t -> t
+
     val fusion: int -> int -> t -> t*bool 
     val reduce_equalities_one_step: t -> int list -> int list *t option
 
@@ -176,9 +179,9 @@ module type DIS_DOMAIN =
     val bottom: t
     
     (* mut [o1, ..on] &x &y assign *)
-    val mutation: offset list -> int -> int -> sc_assignment -> t -> t 
+    val mutation: offset list -> offset list -> int -> int -> sc_assignment -> t -> t 
       
-    val filter: int -> int -> sc_cond -> t -> t * t
+    val filter: offset list -> int -> int -> sc_cond -> t -> t * t
 
     val pp: t -> string
 
