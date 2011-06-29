@@ -91,10 +91,10 @@ module MAKE_DOMAIN =
 
        let search: t -> (int * offset) list -> t * int list = fun t l_io ->
 	 if debug then print_debug "DOMAIN: search for [ %s] in t....\n"
-	   (List.fold_left (fun s (i, o)-> Printf.sprintf "%s%i%s, " s i (pp_offset o)) "" l_io);
+	   (List.fold_left (fun s (i, o)-> Printf.sprintf "%s%i%s " s i (pp_offset o)) "" l_io);
 	 let t, l_i = aux_search t l_io bottom [] in
 	   if debug then print_debug "DOMAIN: found [ %s]\n"
-	     (List.fold_left (fun s i-> Printf.sprintf "%s%i, " s i) "" l_i);
+	     (List.fold_left (fun s i-> Printf.sprintf "%s%i " s i) "" l_i);
 	   t, l_i
 
        let rec aux_search2 = fun t l_io l_inv acc_t acc_i acc_inv -> 
@@ -136,79 +136,127 @@ module MAKE_DOMAIN =
 
        let search2: t -> (int * offset) list -> int list list -> t * int list * int list list = fun t l_io l_inv ->
 	 if debug then print_debug "DOMAIN: search2 for [ %s] in t....\n"
-	   (List.fold_left (fun s (i, o)-> Printf.sprintf "%s%i%s, " s i (pp_offset o)) "" l_io);
+	   (List.fold_left (fun s (i, o)-> Printf.sprintf "%s%i%s " s i (pp_offset o)) "" l_io);
 	 let t, l_i, l_inv = aux_search2 t l_io l_inv bottom [] [] in
 	   if debug then print_debug "DOMAIN: (s2) found [ %s]\n"
-	     (List.fold_left (fun s i-> Printf.sprintf "%s%i, " s i) "" l_i);
+	     (List.fold_left (fun s i-> Printf.sprintf "%s%i " s i) "" l_i);
 	   t, l_i, l_inv
 
-       let rec get_sc_hvalue: sc_hvalue -> int -> t -> t * (int * offset) list = fun e i t ->
+       let rec get_sc_hvalue: sc_hvalue -> int -> t -> t * int list * offset = fun e i t ->
 	 if debug then print_debug "DOMAIN: [rec] get_sc_hvalue %s\n" (sc_hvalue2str e);
-	 match e with
-	   | Var _ -> 
-	       begin 
-		 match t with
-		   | D_Top -> t, []
-		   | Disjunction l_t -> t, List.map (fun _-> i, Zero) l_t
-	       end
-	   | ArrayAccess(k, e) ->
-	       let t, l_io = get_sc_hvalue e i t in
-		 t, List.map (fun (j, o) -> j , ArrayRange(k, o)) l_io
-	   | FieldAccess(f, e) ->
-	       let t, l_io = get_sc_hvalue e i t in
-		 t, List.map (fun (j, o) -> j , RecordField(f, o)) l_io
-	   | Deref e ->
-	       let t, l_io = get_sc_hvalue e i t in
-	       let t, l_i = search t l_io in
-		 t, List.map (fun j -> j, Zero) l_i	    
-
+	 let t, l_i, o = 
+	   match e with
+	     | Var _ -> 
+		 begin 
+		   match t with
+		     | D_Top -> t, [], Zero
+		     | Disjunction l_t -> t, List.map (fun _-> i) l_t, Zero
+		 end
+	     | ArrayAccess(k, e) ->
+		 let t, l_i, o = get_sc_hvalue e i t in
+		   t, l_i, ArrayRange(k, o)
+	     | FieldAccess(f, e) ->
+		 let t, l_i, o = get_sc_hvalue e i t in
+		   t, l_i, RecordField(f, o)
+	     | Deref e ->
+		 let t, l_i, o = get_sc_hvalue e i t in
+		 let t, l_i = search t (List.map (fun i->i, o) l_i) in
+		   t, l_i, Zero in
+	   if debug then print_debug "DOMAIN: found sc_hvalue %s [ %s]%s\n" (sc_hvalue2str e)
+	     (List.fold_left (fun s i->Printf.sprintf "%s%i " s i) "" l_i) (pp_offset o);
+	   t, l_i, o
+	
+       let rec get_sc_hvalue2: sc_hvalue -> int -> t -> int list list -> t * int list * offset * int list list = 
+	 fun e i t l_inv ->
+	   if debug then print_debug "DOMAIN: [rec] get_sc_hvalue2 %s\n" (sc_hvalue2str e);
+	   let t, l_i, o, l_inv = 
+	     match e with
+	       | Var _ -> 
+		   begin 
+		     match t with
+		       | D_Top -> t, [], Zero, []
+		       | Disjunction l_t -> t, List.map (fun _-> i) l_t, Zero, l_inv
+		   end
+	       | ArrayAccess(k, e) ->
+		   let t, l_i, o, l_inv = get_sc_hvalue2 e i t l_inv in
+		     t, l_i, ArrayRange(k, o), l_inv
+	       | FieldAccess(f, e) ->
+		   let t, l_i, o, l_inv = get_sc_hvalue2 e i t l_inv in
+		     t, l_i, RecordField(f, o), l_inv
+	       | Deref e ->
+		   let t, l_i, o, l_inv = get_sc_hvalue2 e i t l_inv in
+		   let t, l_i, l_inv = search2 t (List.map (fun i->i, o) l_i) l_inv in
+		     t, l_i, Zero, l_inv in
+	     if debug then print_debug "DOMAIN: found sc_hvalue2 %s [ %s]%s\n" (sc_hvalue2str e)
+	       (List.fold_left (fun s i->Printf.sprintf "%s%i " s i) "" l_i) (pp_offset o);
+	     t, l_i, o, l_inv
 	
        let get_sc_vvalue: sc_vvalue -> int -> offset list -> t -> t * int list = fun e i l_o_malloc t ->
-	 if debug then print_debug "DOMAIN: get_sc_vvalue %s\n" (sc_vvalue2str e);	 
-	 match t, e with
-	   | D_Top, _ -> 
-	       D_Top, []
-	   | Disjunction l_t, FloatConst _ | Disjunction l_t, IntConst _ ->
-	       let l_i, l_t = List.split (List.map (fun t -> S.create_fresh_node t) l_t) in
-		 Disjunction l_t, l_i
-	   | Disjunction l_t, Null ->
-	       t, List.map (fun _->0) l_t
-	   | Disjunction l_t, Malloc _ ->
-	       let l_i, l_t = List.split (List.map (fun t -> S.malloc l_o_malloc t) l_t) in
-		 Disjunction l_t, l_i
-	   | Disjunction l_t, Address e ->
-	       let t, l_io = get_sc_hvalue e i t in
-		 t, List.map (fun (j, o)-> j) l_io 
+	 if debug then print_debug "DOMAIN: get_sc_vvalue %s\n" (sc_vvalue2str e);
+	 let t, l_i = 
+	   match t, e with
+	     | D_Top, _ -> 
+		 D_Top, []
+	     | Disjunction l_t, FloatConst _ | Disjunction l_t, IntConst _ ->
+		 let l_i, l_t = List.split (List.map (fun t -> S.create_fresh_node t) l_t) in
+		   Disjunction l_t, l_i
+	     | Disjunction l_t, Null ->
+		 t, List.map (fun _->0) l_t
+	     | Disjunction l_t, Malloc _ ->
+		 let l_i, l_t = List.split (List.map (fun t -> S.malloc l_o_malloc t) l_t) in
+		   Disjunction l_t, l_i
+	     | Disjunction l_t, Address e ->
+		 let t, l_i, o = get_sc_hvalue e i t in
+		   if o==Zero then 
+		     t, l_i  
+		   else (* feature not suported: &x->n *)
+		     top, [] in
+	   if debug then print_debug "DOMAIN: found sc_vvalue %s [ %s]\n" (sc_vvalue2str e)
+	     (List.fold_left (fun s i->Printf.sprintf "%s%i " s i) "" l_i);
+	   t, l_i
 		
        let mutation: offset list -> offset list -> int -> int -> sc_assignment -> t -> t = 
 	 fun l_offset_mut l_o_malloc i j (la, ra) t -> 
 	   if debug then print_debug "DOMAIN: mutation %s\n" (sc_assignment2str (la, ra));	 
+	   (* first we take care of rigth hande side of the assignment 
+	      and get the nodes which will be copied *)
 	   let t, in_mut = 
 	     match ra with
 	       | HValue e -> 
-		   let t, l_io = get_sc_hvalue e j t in
-		   let l_o = List.map (fun (x,y)->y) l_io in
+		   let t, l_i, off = get_sc_hvalue e j t in
+		   let t, l = 
 		     List.fold_left
 		       (fun (t, l) o -> 
-			  let l_io = List.combine (List.map List.hd l) l_o in
-			  let t, li, l = search2 t (List.map (fun (i,oo)->i, appendOffset o oo) l_io) l in
+			  let o = appendOffset o off in
+			  let l_io = List.map (fun i->i,o) (List.map List.hd l) in
+			  let t, li, l = search2 t l_io l in
 			    t, List.map2 (fun x y -> (List.hd y)::x::(List.tl y)) li l)
-		       (t, (List.map (fun (i, o)->[i]) l_io)) l_offset_mut
+		       (t, (List.map (fun i->[i]) l_i)) (List.rev l_offset_mut) in
+		     t, List.map List.tl l
 	       | VValue e -> 
 		   let t, l_i = get_sc_vvalue e j l_o_malloc t in
 		     t, List.map (fun x->[x]) l_i in
-	   let t, l_io = get_sc_hvalue la i t in
-	     match t with
+	   (* now we deal with left hand side of the assignment *)
+	   let t, l_i, o, in_mut = get_sc_hvalue2 la i t in_mut in
+	     (* we make appear the edges we wanna update *)
+	   let l_offset_mut = List.map (fun oo-> appendOffset oo o) l_offset_mut in
+	   let t, l = 
+	     List.fold_left
+	       (fun (t, l) o -> 
+		  let l_io = List.map (fun i->i, o) (List.map List.hd l) in
+		  let t, _, l = search2 t l_io l in t, l)
+	       (t, List.map2 (fun x y->x::y) l_i in_mut) l_offset_mut in
+	   let l_i = List.map List.hd l and in_mut = List.map List.tl l in
+	     match t with 
 	       | D_Top -> D_Top 
 	       | Disjunction l_t -> 
-		   Disjunction 
-		     (List.map2 
-			(fun (t, (i, oo)) li ->
-			   List.fold_left2
-			     (fun t o j -> S.mutate i oo j t)
-			     t l_offset_mut li) 
-			(List.combine l_t l_io) in_mut)    
-		
+		   Disjunction
+		     (map3 
+			(fun t i l -> 
+			   List.fold_left2 
+			     (fun t oo j -> S.mutate i oo j t)
+			     t l_offset_mut l)
+			l_t l_i in_mut)		
 		   
        let filter: int -> int -> sc_cond -> t -> t = fun i j cond t -> t
 
@@ -248,10 +296,11 @@ let t: D.t = D.Disjunction [t]
 
 let x={var_name="x"; var_type=PointerTo(Struct "dll"); var_uniqueId=1;}
 let a: sc_assignment = Var x, HValue (FieldAccess("next",Deref(Var x)))
+let a2: sc_assignment = Deref (Var x), HValue (Deref(FieldAccess("next",Deref(Var x))))
 
 let fields = [RecordField("next", Zero);RecordField("prev", Zero);RecordField("top", Zero)]
 
-let t = D.mutation [Zero] [] 1 1 a t
+let t = D.mutation fields [] 1 1 a2 t
 
 let _ = 
   Printf.printf "%s" (D.pp t)
