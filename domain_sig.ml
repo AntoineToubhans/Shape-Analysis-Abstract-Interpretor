@@ -4,7 +4,7 @@
 open Offset
 open Utils
 open Simple_C_syntax
-
+  
 type inductive = 
     { target: int;
       source_parameters: int list;
@@ -13,21 +13,21 @@ type inductive =
       (* 0 means we don't know how long is the sequence         *)
       (* 0 long sequence are forbidden, and immediately reduced *)
       length: int;}
-
+      
 let pp_inductive: inductive -> string = fun ind ->
   Printf.sprintf "ind(%s) *=%s= %i.ind(%s)" 
     (pp_list ind.source_parameters) 
     (if ind.length==0 then "" else (Printf.sprintf "%i" ind.length)) 
     ind.target (pp_list ind.target_parameters)
-
+    
 let get_domain_inductive: inductive -> int list = fun ind ->
   ind.target::(List.append ind.source_parameters ind.target_parameters)
-
-     
+    
+    
 module type SL_GRAPH_DOMAIN =
   sig      
     type t
-
+      
     val empty: t
       
     val is_node_empty: int -> t -> bool
@@ -116,7 +116,7 @@ module type INDUCTIVE_DEF =
   end
 
 module type SL_DOMAIN = 
-  sig
+sig
     module G: SL_GRAPH_DOMAIN
     module P: PRED_DOMAIN
     module D: INDUCTIVE_DEF
@@ -178,10 +178,11 @@ module type DIS_DOMAIN =
     (* mut [o1, ..on] &x &y assign *)
     val mutation: offset list -> int -> int -> sc_assignment -> t -> t 
       
-    val filter: int -> int -> sc_cond -> t -> t
+    val filter: int -> int -> sc_cond -> t -> t * t
 
     val pp: t -> string
 
   end 
+
 
 

@@ -15,7 +15,7 @@ open Simple_C_syntax
 
 let error(s: string) = failwith (Printf.sprintf "DOMAIN_ERROR: %s" s)
 
-module MAKE_DOMAIN =
+module MAKE_DIS_DOMAIN =
   functor (S: SL_DOMAIN) -> 
     struct
   
@@ -258,7 +258,14 @@ module MAKE_DOMAIN =
 			     t l_offset_mut l)
 			l_t l_i in_mut)		
 		   
-       let filter: int -> int -> sc_cond -> t -> t = fun i j cond t -> t
+       let filter: int -> int -> sc_cond -> t -> t*t = fun i j cond t -> 
+	 if debug then print_debug "DOMAIN: filter %s\n" (sc_cond2str cond);	 
+	 let  b, e1, e2 = 
+	   match cond with
+	     | Eq(e1, e2) -> true, e1, e2
+	     | Neq(e1, e2) -> false, e1, e2 in
+	   t, t
+
 
        let pp: t -> string = fun t -> 
 	 let s = 
@@ -281,7 +288,8 @@ module S = MAKE_SL_DOMAIN(DLList)
 
 let g = S.G.empty
 let p = S.P.empty
-let p = S.P.add_neq 2 4 p
+let p = S.P.add_neq 3 4 p
+let p = S.P.add_neq 2 3 p
 
 let g = S.G.add_edge 1 Zero 2 g
 let g = S.G.add_inductive 2 {target=3; source_parameters=[0]; target_parameters=[5]; length=0} g
@@ -290,7 +298,7 @@ let g = S.G.add_edge 4 (RecordField ("prev", Zero)) 6 g
 
 let t: S.t = S.mk g p
 
-module D = MAKE_DOMAIN(S)
+module D = MAKE_DIS_DOMAIN(S)
 
 let t: D.t = D.Disjunction [t]
 
