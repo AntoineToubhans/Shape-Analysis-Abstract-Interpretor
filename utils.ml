@@ -25,6 +25,12 @@ let map_default: ('a -> 'b) -> 'b -> 'a option -> 'b = fun f b ->
 exception Top
 exception Bottom
 
+let rec map3: ('a -> 'b -> 'c -> 'd) -> 'a list -> 'b list -> 'c list -> 'd list = fun f aa bb cc -> 
+    match aa, bb, cc with
+    | [], [], [] -> []
+    | a::aa, b::bb, c::cc -> (f a b c)::(map3 f aa bb cc)
+    | _ -> raise (Invalid_argument "Utils.map3")
+
 let maxlist l = 
   let rec ml l acc = 
     match l with | [] -> acc | a::l -> ml l (max a acc) in ml l 0

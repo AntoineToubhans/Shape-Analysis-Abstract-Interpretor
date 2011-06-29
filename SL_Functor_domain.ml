@@ -146,7 +146,11 @@ module MAKE_DOMAIN =
 	 if debug then print_debug "DOMAIN: [rec] get_sc_hvalue %s\n" (sc_hvalue2str e);
 	 match e with
 	   | Var _ -> 
-	       t, [i, Zero]
+	       begin 
+		 match t with
+		   | D_Top -> t, []
+		   | Disjunction l_t -> t, List.map (fun _-> i, Zero) l_t
+	       end
 	   | ArrayAccess(k, e) ->
 	       let t, l_io = get_sc_hvalue e i t in
 		 t, List.map (fun (j, o) -> j , ArrayRange(k, o)) l_io
@@ -183,17 +187,19 @@ module MAKE_DOMAIN =
 	     match ra with
 	       | HValue e -> 
 		   let t, l_io = get_sc_hvalue e j t in
+		   let l_o = List.map (fun (x,y)->y) l_io in
 		     List.fold_left
 		       (fun (t, l) o -> 
-			  let t, li = search t (List.map (fun (i,oo)->i, appendOffset o oo) l_io) in
-			    t, List.map2 (fun x y -> x::y) li l)
-		       (t, (List.map (fun _->[]) l_io)) l_offset_mut
+			  let l_io = List.combine (List.map List.hd l) l_o in
+			  let t, li, l = search2 t (List.map (fun (i,oo)->i, appendOffset o oo) l_io) l in
+			    t, List.map2 (fun x y -> (List.hd y)::x::(List.tl y)) li l)
+		       (t, (List.map (fun (i, o)->[i]) l_io)) l_offset_mut
 	       | VValue e -> 
 		   let t, l_i = get_sc_vvalue e j l_o_malloc t in
 		     t, List.map (fun x->[x]) l_i in
 	   let t, l_io = get_sc_hvalue la i t in
 	     match t with
-	       | D_Top -> D_Top
+	       | D_Top -> D_Top 
 	       | Disjunction l_t -> 
 		   Disjunction 
 		     (List.map2 
