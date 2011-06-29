@@ -88,10 +88,59 @@ module MAKE_DOMAIN =
 			      (List.append (List.map (fun x-> x, o) lj2) (List.tl l_io)))
 			   acc_t acc_i
 
-       let search: t -> (int * offset) list -> t * int list = fun t l_io ->
-	 if debug then print_debug "DOMAIN: search.....\n";
-	 aux_search t l_io bottom []
 
+       let search: t -> (int * offset) list -> t * int list = fun t l_io ->
+	 if debug then print_debug "DOMAIN: search for [ %s] in t....\n"
+	   (List.fold_left (fun s (i, o)-> Printf.sprintf "%s%i%s, " s i (pp_offset o)) "" l_io);
+	 let t, l_i = aux_search t l_io bottom [] in
+	   if debug then print_debug "DOMAIN: found [ %s]\n"
+	     (List.fold_left (fun s i-> Printf.sprintf "%s%i, " s i) "" l_i);
+	   t, l_i
+
+       let rec aux_search2 = fun t l_io l_inv acc_t acc_i acc_inv -> 
+	 match t with
+	   | D_Top -> D_Top, [], []
+	   | Disjunction [] -> acc_t, acc_i, acc_inv
+	   | Disjunction l_t ->
+	       let t = List.hd l_t and i, o = List.hd l_io and l_inv_t = List.hd l_inv in
+		 try
+		   let j, t = S.search i o t in 
+		   let ljinv, t = reduce_equalities (j::l_inv_t) t in
+		   let lj = List.map List.hd ljinv and ll_inv_t = List.map List.tl ljinv in
+		     aux_search2 
+		       (Disjunction (List.tl l_t)) 
+		       (List.tl l_io) 
+		       (List.tl l_inv) 
+		       (disjunction t acc_t) 
+		       (List.append lj acc_i)  
+		       (List.append ll_inv_t acc_inv)
+		 with
+		   | Top -> D_Top, [], []
+		   | Split (b, k) ->
+		       if debug then print_debug "DOMAIN: Split(%b, %i) caugth **\n" b k;
+		       let t1, t2 = catch_split b k t in 
+		       let ljinv1, t1 = reduce_equalities (i::l_inv_t) t1 
+		       and ljinv2, t2 = reduce_equalities (i::l_inv_t) t2 in
+		       let lj1 = List.map List.hd ljinv1 
+		       and lj2 = List.map List.hd ljinv2 
+		       and ll_inv_t1 = List.map List.tl ljinv1 
+		       and ll_inv_t2 = List.map List.tl ljinv2 in
+			 aux_search2
+			   (disjunction t1 (disjunction t2 (Disjunction (List.tl l_t))))
+			   (List.append 
+			      (List.map (fun x-> x, o) lj1) 
+			      (List.append (List.map (fun x-> x, o) lj2) (List.tl l_io)))
+			   (List.append ll_inv_t1
+			      (List.append ll_inv_t2 (List.tl l_inv)))
+			   acc_t acc_i acc_inv
+
+       let search2: t -> (int * offset) list -> int list list -> t * int list * int list list = fun t l_io l_inv ->
+	 if debug then print_debug "DOMAIN: search2 for [ %s] in t....\n"
+	   (List.fold_left (fun s (i, o)-> Printf.sprintf "%s%i%s, " s i (pp_offset o)) "" l_io);
+	 let t, l_i, l_inv = aux_search2 t l_io l_inv bottom [] [] in
+	   if debug then print_debug "DOMAIN: (s2) found [ %s]\n"
+	     (List.fold_left (fun s i-> Printf.sprintf "%s%i, " s i) "" l_i);
+	   t, l_i, l_inv
 
        let rec get_sc_hvalue: sc_hvalue -> int -> t -> t * (int * offset) list = fun e i t ->
 	 if debug then print_debug "DOMAIN: [rec] get_sc_hvalue %s\n" (sc_hvalue2str e);
@@ -194,9 +243,9 @@ let t: D.t = D.Disjunction [t]
 let x={var_name="x"; var_type=PointerTo(Struct "dll"); var_uniqueId=1;}
 let a: sc_assignment = Var x, HValue (FieldAccess("next",Deref(Var x)))
 
-let t = D.mutation 
-  [RecordField("next", Zero);RecordField("prev", Zero);RecordField("top", Zero)]
-  [] 1 1 a t
+let fields = [RecordField("next", Zero);RecordField("prev", Zero);RecordField("top", Zero)]
+
+let t = D.mutation [Zero] [] 1 1 a t
 
 let _ = 
   Printf.printf "%s" (D.pp t)
