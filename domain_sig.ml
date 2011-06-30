@@ -187,5 +187,13 @@ module type DIS_DOMAIN =
 
   end 
 
+module type DOMAIN =
+  sig
 
+    type t
 
+    val eval_sc_assignment: sc_assignment -> t -> t
+    val eval_sc_struct_decl: sc_struct_decl -> t -> t
+    val eval_sc_var_decl: sc_var_decl -> t -> t
+
+  end

@@ -8,16 +8,16 @@ open SL_domain
 open Simple_C_syntax
 
 (* =========================================================== *)
-(* Module Domain Functor                                       *)
+(* Module DIS_Domain Functor                                   *)
 (* =========================================================== *)
 (*                                        Created: AT 06/23/11 *)
-(*                                  Last modified: AT 06/23/11 *)
+(*                                  Last modified: AT 06/30/11 *)
 
-let error(s: string) = failwith (Printf.sprintf "DOMAIN_ERROR: %s" s)
+let error(s: string) = failwith (Printf.sprintf "DIS_DOMAIN_ERROR: %s" s)
 
 module MAKE_DIS_DOMAIN =
   functor (S: SL_DOMAIN) -> 
-    struct
+    (struct
   
        type t = 
 	 | Disjunction of S.t list
@@ -46,7 +46,7 @@ module MAKE_DIS_DOMAIN =
 
        (* reduce_equalities i t ---> [i1;...;in], t1/\.../\tn *)
        let rec reduce_equalities: int list -> S.t -> int list list * t = fun l_pt t ->
- 	 if debug then print_debug "DOMAIN: [rec] reduce_equalities \n";
+ 	 if debug then print_debug "DIS_DOMAIN: [rec] reduce_equalities \n";
 	 try
 	   match S.reduce_equalities_one_step t l_pt with
 	     | _, None -> [l_pt], Disjunction [t]
@@ -77,7 +77,7 @@ module MAKE_DIS_DOMAIN =
 		 with
 		   | Top -> D_Top, []
 		   | Split (b, k) ->
-		       if debug then print_debug "DOMAIN: Split(%b, %i) caugth **\n" b k;
+		       if debug then print_debug "DIS_DOMAIN: Split(%b, %i) caugth **\n" b k;
 		       let t1, t2 = catch_split b k t in 
 		       let lj1, t1 = reduce_equalities [i] t1 and lj2, t2 = reduce_equalities [i] t2 in
 		       let lj1 = List.map List.hd lj1 and lj2 = List.map List.hd lj2 in
@@ -90,10 +90,10 @@ module MAKE_DIS_DOMAIN =
 
 
        let search: t -> (int * offset) list -> t * int list = fun t l_io ->
-	 if debug then print_debug "DOMAIN: search for [ %s] in t....\n"
+	 if debug then print_debug "DIS_DOMAIN: search for [ %s] in t....\n"
 	   (List.fold_left (fun s (i, o)-> Printf.sprintf "%s%i%s " s i (pp_offset o)) "" l_io);
 	 let t, l_i = aux_search t l_io bottom [] in
-	   if debug then print_debug "DOMAIN: found [ %s]\n"
+	   if debug then print_debug "DIS_DOMAIN: found [ %s]\n"
 	     (List.fold_left (fun s i-> Printf.sprintf "%s%i " s i) "" l_i);
 	   t, l_i
 
@@ -117,7 +117,7 @@ module MAKE_DIS_DOMAIN =
 		 with
 		   | Top -> D_Top, [], []
 		   | Split (b, k) ->
-		       if debug then print_debug "DOMAIN: Split(%b, %i) caugth **\n" b k;
+		       if debug then print_debug "DIS_DOMAIN: Split(%b, %i) caugth **\n" b k;
 		       let t1, t2 = catch_split b k t in 
 		       let ljinv1, t1 = reduce_equalities (i::l_inv_t) t1 
 		       and ljinv2, t2 = reduce_equalities (i::l_inv_t) t2 in
@@ -135,15 +135,15 @@ module MAKE_DIS_DOMAIN =
 			   acc_t acc_i acc_inv
 
        let search2: t -> (int * offset) list -> int list list -> t * int list * int list list = fun t l_io l_inv ->
-	 if debug then print_debug "DOMAIN: search2 for [ %s] in t....\n"
+	 if debug then print_debug "DIS_DOMAIN: search2 for [ %s] in t....\n"
 	   (List.fold_left (fun s (i, o)-> Printf.sprintf "%s%i%s " s i (pp_offset o)) "" l_io);
 	 let t, l_i, l_inv = aux_search2 t l_io l_inv bottom [] [] in
-	   if debug then print_debug "DOMAIN: (s2) found [ %s]\n"
+	   if debug then print_debug "DIS_DOMAIN: (s2) found [ %s]\n"
 	     (List.fold_left (fun s i-> Printf.sprintf "%s%i " s i) "" l_i);
 	   t, l_i, l_inv
 
        let rec get_sc_hvalue: sc_hvalue -> int -> t -> t * int list * offset = fun e i t ->
-	 if debug then print_debug "DOMAIN: [rec] get_sc_hvalue %s\n" (sc_hvalue2str e);
+	 if debug then print_debug "DIS_DOMAIN: [rec] get_sc_hvalue %s\n" (sc_hvalue2str e);
 	 let t, l_i, o = 
 	   match e with
 	     | Var _ -> 
@@ -162,13 +162,13 @@ module MAKE_DIS_DOMAIN =
 		 let t, l_i, o = get_sc_hvalue e i t in
 		 let t, l_i = search t (List.map (fun i->i, o) l_i) in
 		   t, l_i, Zero in
-	   if debug then print_debug "DOMAIN: found sc_hvalue %s [ %s]%s\n" (sc_hvalue2str e)
+	   if debug then print_debug "DIS_DOMAIN: found sc_hvalue %s [ %s]%s\n" (sc_hvalue2str e)
 	     (List.fold_left (fun s i->Printf.sprintf "%s%i " s i) "" l_i) (pp_offset o);
 	   t, l_i, o
 	
        let rec get_sc_hvalue2: sc_hvalue -> int -> t -> int list list -> t * int list * offset * int list list = 
 	 fun e i t l_inv ->
-	   if debug then print_debug "DOMAIN: [rec] get_sc_hvalue2 %s\n" (sc_hvalue2str e);
+	   if debug then print_debug "DIS_DOMAIN: [rec] get_sc_hvalue2 %s\n" (sc_hvalue2str e);
 	   let t, l_i, o, l_inv = 
 	     match e with
 	       | Var _ -> 
@@ -187,12 +187,12 @@ module MAKE_DIS_DOMAIN =
 		   let t, l_i, o, l_inv = get_sc_hvalue2 e i t l_inv in
 		   let t, l_i, l_inv = search2 t (List.map (fun i->i, o) l_i) l_inv in
 		     t, l_i, Zero, l_inv in
-	     if debug then print_debug "DOMAIN: found sc_hvalue2 %s [ %s]%s\n" (sc_hvalue2str e)
+	     if debug then print_debug "DIS_DOMAIN: found sc_hvalue2 %s [ %s]%s\n" (sc_hvalue2str e)
 	       (List.fold_left (fun s i->Printf.sprintf "%s%i " s i) "" l_i) (pp_offset o);
 	     t, l_i, o, l_inv
 	
        let get_sc_vvalue: sc_vvalue -> int -> offset list -> t -> t * int list = fun e i l_o_malloc t ->
-	 if debug then print_debug "DOMAIN: get_sc_vvalue %s\n" (sc_vvalue2str e);
+	 if debug then print_debug "DIS_DOMAIN: get_sc_vvalue %s\n" (sc_vvalue2str e);
 	 let t, l_i = 
 	   match t, e with
 	     | D_Top, _ -> 
@@ -211,13 +211,13 @@ module MAKE_DIS_DOMAIN =
 		     t, l_i  
 		   else (* feature not suported: &x->n *)
 		     top, [] in
-	   if debug then print_debug "DOMAIN: found sc_vvalue %s [ %s]\n" (sc_vvalue2str e)
+	   if debug then print_debug "DIS_DOMAIN: found sc_vvalue %s [ %s]\n" (sc_vvalue2str e)
 	     (List.fold_left (fun s i->Printf.sprintf "%s%i " s i) "" l_i);
 	   t, l_i
 		
        let mutation: offset list -> offset list -> int -> int -> sc_assignment -> t -> t = 
 	 fun l_offset_mut l_o_malloc i j (la, ra) t -> 
-	   if debug then print_debug "DOMAIN: mutation %s\n" (sc_assignment2str (la, ra));	 
+	   if debug then print_debug "DIS_DOMAIN: mutation %s\n" (sc_assignment2str (la, ra));	 
 	   (* first we take care of rigth hande side of the assignment 
 	      and get the nodes which will be copied *)
 	   let t, in_mut = 
@@ -259,7 +259,7 @@ module MAKE_DIS_DOMAIN =
 			l_t l_i in_mut)		
       
        let aux_filter: (int list * int list) list -> t -> t*t = fun l t -> 
-	 if debug then print_debug "DOMAIN: perform filtering....[%s]\n"
+	 if debug then print_debug "DIS_DOMAIN: perform filtering....[%s]\n"
 	   (List.fold_left (fun s l -> s) "" l);
 	 match t with
 	   | D_Top -> top, top
@@ -279,7 +279,7 @@ module MAKE_DIS_DOMAIN =
 
 
        let filter: offset list -> int -> int -> sc_cond -> t -> t*t = fun l_o i j cond t -> 
-	 if debug then print_debug "DOMAIN: filter %s\n" (sc_cond2str cond);	 
+	 if debug then print_debug "DIS_DOMAIN: filter %s\n" (sc_cond2str cond);	 
 	 let  b, e1, e2 = 
 	   match cond with
 	     | Eq(e1, e2) -> true, e1, e2
@@ -371,8 +371,8 @@ module MAKE_DIS_DOMAIN =
 	   Printf.sprintf 
 	     "*****-------Print DOMAIN --------*****\n%s" s
 
-     end
-
+    end: DIS_DOMAIN)
+(*
 module S = MAKE_SL_DOMAIN(DLList)
 
 let g = S.G.empty
@@ -403,3 +403,4 @@ let _ =
   Printf.printf "%s" (D.pp t2)
 
 
+*)

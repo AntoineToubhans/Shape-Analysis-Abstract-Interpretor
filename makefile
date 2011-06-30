@@ -29,7 +29,8 @@ ML_FILES=	simple_C_syntax.ml \
 		neq_pred_domain.ml \
 		SL_graph_domain.ml \
 		SL_domain.ml \
-		SL_Functor_domain.ml		
+		SL_Functor_domain.ml \
+		functor_domain.ml
 CMX_FILES=      $(ML_FILES:%.ml=%.cmx)
 analyzer: $(CMX_FILES) 
 	ocamlopt $(CMX_FILES) -o analyzer
