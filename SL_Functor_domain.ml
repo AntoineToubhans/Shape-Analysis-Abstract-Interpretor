@@ -258,22 +258,25 @@ module MAKE_DIS_DOMAIN =
 			     t l_offset_mut l)
 			l_t l_i in_mut)		
       
-(*       let aux_filter: (int*int) list list -> t -> t*t = fun l t -> 
+       let aux_filter: (int list * int list) list -> t -> t*t = fun l t -> 
 	 if debug then print_debug "DOMAIN: perform filtering....[%s]\n"
 	   (List.fold_left (fun s l -> s) "" l);
 	 match t with
 	   | D_Top -> top, top
 	   | Disjunction l_t ->
 	       List.fold_left2 
-		 (fun (t1, t2) tt l_ij ->
-		    List.fold_left
-		      (fun (tt1, tt2) (i, j) -> S.request_eq i j tt1, S.request 
-		    let tt1 = S.request_eq i j tt and tt2 = S.request_neq i j tt in
+		 (fun (t1, t2) tt (l_i, l_j) ->
+		    let tt1 = 
+		      List.fold_left2
+			(fun tt1 i j -> S.request_eq i j tt1) tt l_i l_j
+		    and lt2 = 
+		      List.map2
+			(fun i j -> S.request_neq i j tt) l_i l_j in
 		    let _, tt1 = reduce_equalities [] tt1 
-		    and _, tt2 = reduce_equalities [] tt2 in
+		    and tt2 = Disjunction lt2 in
 		      disjunction t1 tt1, disjunction t2 tt2)
 		 (bottom, bottom) l_t l
-*)
+
 
        let filter: offset list -> int -> int -> sc_cond -> t -> t*t = fun l_o i j cond t -> 
 	 if debug then print_debug "DOMAIN: filter %s\n" (sc_cond2str cond);	 
@@ -281,47 +284,81 @@ module MAKE_DIS_DOMAIN =
 	   match cond with
 	     | Eq(e1, e2) -> true, e1, e2
 	     | Neq(e1, e2) -> false, e1, e2 in
-	   match e1, e2 with
-	     | HValue e1, HValue e2 -> t, t
-	     | HValue e1, VValue e2 | VValue e2, HValue e1 -> t, t
-	     | VValue e1, VValue e2 ->
+	 let t1, t2 = 
+	   match e1, e2, i, j with
+	     | HValue e1, HValue e2, _, _ -> 
+		 let t, l_i, oi = get_sc_hvalue e1 i t in
+		 let t, l = List.fold_left
+		   (fun (t, l) o -> 
+		      let o = appendOffset o oi in
+		      let l_io = List.map (fun i->i,o) (List.map List.hd l) in
+		      let t, l_i, l = search2 t l_io l in
+			t, List.map2 (fun x y -> (List.hd y)::x::(List.tl y)) l_i l)
+		   (t, List.map (fun i->[i]) l_i) l_o in
+		 let t, l_j, oj, l = get_sc_hvalue2 e2 j t (List.map List.tl l) in
+		 let t, l = List.fold_left
+		   (fun (t, l) o -> 
+		      let o = appendOffset o oj in
+		      let l_jo = List.map (fun i->i,o) (List.map List.hd l) in
+		      let t, l_j, l = search2 t l_jo l in
+			t, List.map2 (fun x y -> (List.hd y)::x::(List.tl y)) l_j l)
+		   (t, List.map2 (fun j x ->j::x) l_j l) (List.rev l_o) in
+		 let rec f n l acc = if n==0 then l, acc else f (n-1) (List.tl l) ((List.hd l)::acc)
+		 and n = List.length l_o in 
+		  aux_filter (List.map (fun l -> f n (List.tl l) []) l) t		   
+	     | HValue e1, VValue e2, i, j | VValue e2, HValue e1, j, i ->
+		 begin 
+		   match e2 with
+		     | IntConst _ | FloatConst _ -> 
+			 (* I can't handle this, 
+			    at least till I don't deal with cofibred domain *)
+			 t, t
+		     | Null -> 
+			 let t, l_i, o = get_sc_hvalue e1 i t in
+			 let t, l_i = search t (List.map (fun i->i, o) l_i) in
+			 let l = List.map (fun i-> [0], [i]) l_i in
+			   aux_filter l t
+		     | Address e2 ->
+			 let t, l_i, oi = get_sc_hvalue e1 i t in
+			   (* l_o MUST be [Zero] *)
+			 let t, l_i = search t (List.map (fun i->i, oi) l_i) in
+			 let t, l_j, oj, l = get_sc_hvalue2 e2 j t (List.map (fun i -> [i]) l_i) in
+			   if Offset.equals oj Zero then
+			     aux_filter (List.map2 (fun x y -> [x], y) l_j l) t
+			   else (* can't handle this... *)
+			     t, t
+		     | _ -> 
+			 error (Printf.sprintf "Inconsistent condition %s" (sc_cond2str cond))
+		 end		    
+	     | VValue e1, VValue e2, _, _ ->
 		 begin
 		   match e1, e2 with
 		     | IntConst x, IntConst y ->
-			 if (x=y && b) || (x<>y && not b) then t, bottom else bottom, t
+			 if x=y then t, bottom else bottom, t
 		     | FloatConst x, FloatConst y -> 
-			 if (x=y && b) || (x<>y && not b) then t, bottom else bottom, t
+			 if x=y then t, bottom else bottom, t
 		     | Null, Null ->
-			 if b then t, bottom else bottom, t
+			 t, bottom 
 		     | Address e1, Address e2 -> 
 			 begin
 			   let t, l_i, oi = get_sc_hvalue e1 i t in
 			   let t, l_j, oj, l = get_sc_hvalue2 e2 j t (List.map (fun i->[i]) l_i) in
-			   let l_ij = List.map2 (fun li j -> List.hd li, j) l l_j in
-			     match t with
-			       | D_Top -> top, top
-			       | Disjunction l_t ->
-				   List.fold_left2 
-				     (fun (t1, t2) tt (i, j) -> 
-					let tt1 = S.request_eq i j tt and tt2 = S.request_neq i j tt in
-					let _, tt1 = reduce_equalities [] tt1 
-					and _, tt2 = reduce_equalities [] tt2 in
-					  disjunction t1 tt1, disjunction t2 tt2)
-				     (bottom, bottom) l_t l_ij
+			     if Offset.equals oi oj then
+			       let l = List.map2 (fun li j -> li, [j]) l l_j in
+				 aux_filter l t
+			     else t, t (* can't handle this for now *)
 			 end
 		     | _ -> 
 			 error (Printf.sprintf "Inconsistent condition %s" (sc_cond2str cond))
-		 end
- (* | Malloc of int
-  | Address of sc_hvalue
-  | FloatConst of float
-  | IntConst of int
-  | Null*)
+		 end in
+	   if b then t1, t2 else t2, t1
 
 
        let pp: t -> string = fun t -> 
 	 let s = 
 	   match t with
+	     | Disjunction [] ->
+		 "Bottom\n"
 	     | Disjunction l ->
 		 let it = ref 0 in
 		   List.fold_left 
@@ -341,14 +378,10 @@ module S = MAKE_SL_DOMAIN(DLList)
 let g = S.G.empty
 let p = S.P.empty
 
-let p = S.P.add_neq 2 4 p
+let g = S.G.add_edge 1 (RecordField("a", Zero)) 2 g
+let g = S.G.add_inductive 2 {target=3; source_parameters=[0]; target_parameters=[0]; length=5} g
 
-let g = S.G.add_edge 1 Zero 2 g
-let g = S.G.add_inductive 2 {target=3; source_parameters=[0]; target_parameters=[5]; length=0} g
-let g = S.G.add_inductive 3 {target=4; source_parameters=[5]; target_parameters=[6]; length=0} g
-let g = S.G.add_edge 4 (RecordField ("prev", Zero)) 6 g
-
-let t: S.t = S.mk g p
+let t: S.t = S.mk g p 
 
 module D = MAKE_DIS_DOMAIN(S)
 
@@ -360,10 +393,13 @@ let a2: sc_assignment = Deref (Var x), HValue (Deref(FieldAccess("next",Deref(Va
 
 let fields = [RecordField("next", Zero);RecordField("prev", Zero);RecordField("top", Zero)]
 
-let t1 = D.mutation [Zero] [] 1 1 a t
+let c = Eq(HValue(FieldAccess("a", Var x)), VValue Null)
+
+let t1, t2 = D.filter [Zero] 1 0 c t 
 
 let _ = 
   Printf.printf "%s" (D.pp t);
-  Printf.printf "%s" (D.pp t1)
+  Printf.printf "%s" (D.pp t1);
+  Printf.printf "%s" (D.pp t2)
 
 
