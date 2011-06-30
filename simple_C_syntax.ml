@@ -3,6 +3,7 @@ type sc_record_field = string
 type sc_array_i = int
 
 type sc_type = 
+  | Void
   | ScInt
   | ScFloat
   | Array of sc_type
@@ -22,7 +23,7 @@ type sc_var =
 and sc_var_decl = sc_var * sc_exp option
 
 and sc_hvalue = (*heap value*)
-  | Var of sc_var
+  | Var of string
   | ArrayAccess of sc_array_i*sc_hvalue
   | FieldAccess of sc_record_field*sc_hvalue
   | Deref of sc_hvalue
@@ -45,7 +46,6 @@ type sc_cond =
   | Neq of sc_exp*sc_exp (* e1!=e2 *)
 
 type sc_command = 
-    | Void
     | Assignment of sc_assignment
     | StructDeclaration of sc_struct_decl
     | VarDeclaration of sc_var_decl
@@ -63,6 +63,7 @@ let sc_array_i2str(i: sc_array_i) =
 
 let rec sc_type2str(t: sc_type) = 
   match t with
+    | Void -> "void"
     | ScInt -> "int"
     | ScFloat -> "float"
     | Array t -> Printf.sprintf "%s[]" (sc_type2str t)
@@ -79,7 +80,7 @@ let sc_var2str(v: sc_var) = v.var_name
 
 let rec sc_hvalue2str_aux(e: sc_hvalue) = (* to deal with parentethis (*x).f & *x.f *)*)
   match e with
-    | Var v -> sc_var2str v, false
+    | Var v -> v, false
     | ArrayAccess(i, e) -> 
 	let s, b= sc_hvalue2str_aux e in
 	  if b then
@@ -127,7 +128,6 @@ let sc_cond2str(c: sc_cond) =
 
 let rec sc_command2str (p: sc_command)=
   match p with
-    | Void -> "();\n"
     | Assignment a -> sc_assignment2str a
     | StructDeclaration sd -> sc_struct_decl2str sd
     | VarDeclaration vd -> sc_var_decl2str vd
