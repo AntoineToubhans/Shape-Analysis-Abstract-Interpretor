@@ -142,6 +142,11 @@ module MAKE_DIS_DOMAIN =
 	     (List.fold_left (fun s i-> Printf.sprintf "%s%i " s i) "" l_i);
 	   t, l_i, l_inv
 
+       let union = disjunction
+       let widening = disjunction
+
+       let malloc: offset list -> t -> t* int = fun l_o t -> t, 0
+
        let rec get_sc_hvalue: sc_hvalue -> int -> t -> t * int list * offset = fun e i t ->
 	 if debug then print_debug "DIS_DOMAIN: [rec] get_sc_hvalue %s\n" (sc_hvalue2str e);
 	 let t, l_i, o = 

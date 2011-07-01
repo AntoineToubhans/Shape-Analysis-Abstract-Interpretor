@@ -177,6 +177,11 @@ module type DIS_DOMAIN =
 
     val top: t        
     val bottom: t
+
+    val union: t -> t -> t
+    val widening: t -> t -> t
+
+    val malloc: offset list -> t -> t* int
     
     (* mut [o1, ..on] &x &y assign *)
     val mutation: offset list -> offset list -> int -> int -> sc_assignment -> t -> t 

@@ -23,7 +23,7 @@ type sc_var =
 and sc_var_decl = sc_var * sc_exp option
 
 and sc_hvalue = (*heap value*)
-  | Var of string
+  | Var of sc_var
   | ArrayAccess of sc_array_i*sc_hvalue
   | FieldAccess of sc_record_field*sc_hvalue
   | Deref of sc_hvalue
@@ -80,7 +80,7 @@ let sc_var2str(v: sc_var) = v.var_name
 
 let rec sc_hvalue2str_aux(e: sc_hvalue) = (* to deal with parentethis (*x).f & *x.f *)*)
   match e with
-    | Var v -> v, false
+    | Var v -> v.var_name, false
     | ArrayAccess(i, e) -> 
 	let s, b= sc_hvalue2str_aux e in
 	  if b then

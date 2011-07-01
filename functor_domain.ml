@@ -21,15 +21,15 @@ module MAKE_DOMAIN =
     (struct
 
        type t = 
-	   { env: sc_var StringMap.t;
+	   { env: int IntMap.t;
 	     heap: D.t;
 	     struct_defs: sc_struct_decl StringMap.t}
 
        let rec get_type_hv: sc_hvalue -> t -> sc_type = fun e t ->
 	 if debug then print_debug "DOMAIN: [rec] get type of sc_hvalue %s \n" (sc_hvalue2str e);
 	 match e with
-	   | Var s ->
-	       (StringMap.find s t.env).var_type
+	   | Var x ->
+	       x.var_type
 	   | ArrayAccess(i, e) ->
 	       begin
 		 match get_type_hv e t with
@@ -91,8 +91,8 @@ module MAKE_DOMAIN =
 	 match e with
 	   | ArrayAccess (_, e) | FieldAccess(_, e) | Deref e ->
 	       get_entry_point_hv e t
-	   | Var s -> 
-	       (StringMap.find s t.env).var_uniqueId
+	   | Var x -> 
+	       IntMap.find x.var_uniqueId t.env
 
        let get_entry_point_vv: sc_vvalue -> t -> int = fun e t ->
 	 if debug then print_debug "DOMAIN: get entry_point of sc_vvalue %s \n" (sc_vvalue2str e);
@@ -119,9 +119,9 @@ module MAKE_DOMAIN =
 
        let eval_sc_var_decl: sc_var_decl -> t -> t = fun (x, oe) t -> 
 	 if debug then print_debug "DOMAIN: eval sc_var_decl %s \n" (sc_var_decl2str (x, oe));
-	 if StringMap.mem x.var_name t.env then
+	 if IntMap.mem x.var_uniqueId t.env then
 	   error (Printf.sprintf "declaration of var %s : already exists..." (sc_var2str x));
-	 let t = { t with env = StringMap.add x.var_name x t.env } in
+	 let t = { t with env = IntMap.add x.var_uniqueId 0 t.env } in
 	   t 
 
      end: DOMAIN)
