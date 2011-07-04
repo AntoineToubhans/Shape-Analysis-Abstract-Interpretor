@@ -30,6 +30,8 @@ module type SL_GRAPH_DOMAIN =
       
     val empty: t
       
+    val next: t -> int
+
     val is_node_empty: int -> t -> bool
 
     val add_edge: int -> offset -> int -> t -> t
@@ -42,6 +44,7 @@ module type SL_GRAPH_DOMAIN =
     val update_inductive: int -> inductive -> t -> t
 
     val create_fresh_node: t -> int* t
+    val create_fresh_node_index: int -> t -> t
     val create_n_fresh_nodes: int -> t -> int list*t
 
     val get_edge: int -> offset -> t -> int option
@@ -124,6 +127,8 @@ sig
     type t
     val empty: t
 
+    val next: t -> int
+
     val request_eq: int -> int -> t -> t
     val request_neq: int -> int -> t -> t
 
@@ -136,6 +141,7 @@ sig
 
     val create_fresh_node: t -> int * t
     val malloc: offset list -> t -> int*t
+    val var_alloc: int -> offset list -> t -> t
 
     val case_inductive_forward: int -> t -> t*t
     val case_inductive_backward: int -> t -> t*t
@@ -200,5 +206,9 @@ module type DOMAIN =
     val eval_sc_assignment: sc_assignment -> t -> t
     val eval_sc_struct_decl: sc_struct_decl -> t -> t
     val eval_sc_var_decl: sc_var_decl -> t -> t
+
+    val filter : sc_cond -> t -> t* t
+
+    val eval_sc_command: sc_command -> t -> t 
 
   end

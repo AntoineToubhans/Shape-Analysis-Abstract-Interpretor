@@ -25,6 +25,8 @@ module MAKE_SL_DOMAIN =
        type t = G.t * P.t
 	   
        let empty: t = G.empty, P.empty
+
+       let next: t -> int = fun (g, _) -> G.next g 
     	
        (* WARNING : doesn't check the length, and nullify anyway *)
        let nullify_inductive: int -> t -> t = fun i (g, p) ->
@@ -139,6 +141,15 @@ module MAKE_SL_DOMAIN =
 	 let g = List.fold_left (fun g o -> G.add_edge i o 0 g) g ol in 
 	 let p = IntSet.fold (fun j p -> if j!=i then P.add_neq i j p else p) (G.domain g) p in
 	   i, (g, p)
+	     
+       let var_alloc: int -> offset list -> t -> t = fun i ol (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: var_alloc [%s ]...\n" 
+	   (List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol);
+	 let g = G.create_fresh_node_index i g in
+	 let g = List.fold_left (fun g o -> G.add_edge i o 0 g) g ol in 
+	 let p = IntSet.fold (fun j p -> if j!=i then P.add_neq i j p else p) (G.domain g) p in
+	 let p = P.add_live i p in
+	   (g, p)
 	     
        let case_inductive_forward: int -> t -> t*t = fun i (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: case_inductive_forward %i t\n" i;

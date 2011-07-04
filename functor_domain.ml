@@ -115,13 +115,23 @@ module MAKE_DOMAIN =
 	 and i = get_entry_point_hv la t and j = get_entry_point ra t in
 	   { t with heap = D.mutation l_o l_o_malloc i j (la, ra) t.heap }
 
-       let eval_sc_struct_decl: sc_struct_decl -> t -> t = fun s t -> t
+       let eval_sc_struct_decl: sc_struct_decl -> t -> t = fun s t -> 
+	 {t with struct_defs = StringMap.add (fst s) s t.struct_defs }
 
        let eval_sc_var_decl: sc_var_decl -> t -> t = fun (x, oe) t -> 
 	 if debug then print_debug "DOMAIN: eval sc_var_decl %s \n" (sc_var_decl2str (x, oe));
 	 if IntMap.mem x.var_uniqueId t.env then
 	   error (Printf.sprintf "declaration of var %s : already exists..." (sc_var2str x));
-	 let t = { t with env = IntMap.add x.var_uniqueId 0 t.env } in
-	   t 
+	 let fields = get_fields x.var_type t in
+	 let heap, i = D.malloc fields t.heap in
+	   { env = IntMap.add x.var_uniqueId i t.env;
+	     heap = heap;
+	     struct_defs = t.struct_defs;}
+
+
+       let filter: sc_cond -> t -> t * t = fun c t -> t, t
+
+       let eval_sc_command: sc_command -> t -> t = fun c t -> t
+
 
      end: DOMAIN)

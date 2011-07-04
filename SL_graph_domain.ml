@@ -25,6 +25,8 @@ module SL_GRAPH_DOMAIN =
        { nodes = IntMap.empty;
 	 next = 1;}
 
+     let next: t -> int = fun t -> t.next
+
      let is_node_empty: int -> t -> bool = fun i t ->
        try
 	 let n = IntMap.find i t.nodes in
@@ -94,6 +96,12 @@ module SL_GRAPH_DOMAIN =
     let create_fresh_node: t -> int* t = fun t ->
       if debug then print_debug "SL_GRAPH_DOMAIN: create fresh node...[%i]\n" t.next;
       t.next, {t with next = t.next + 1}
+
+    let create_fresh_node_index: int -> t -> t = fun i t ->
+      if i<t.next then 
+	error (Printf.sprintf "can't create node at %i, not available..." i);
+      if debug then print_debug "SL_GRAPH_DOMAIN: create fresh node (index)...[%i]\n" i;
+      {t with next = i+1}
 
     let create_n_fresh_nodes: int -> t -> int list* t = fun n t ->
       if debug then print_debug "SL_GRAPH_DOMAIN: create %i fresh nodes...[%i,...,%i]\n" n t.next (t.next+n-1);

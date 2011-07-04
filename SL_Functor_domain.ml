@@ -145,7 +145,13 @@ module MAKE_DIS_DOMAIN =
        let union = disjunction
        let widening = disjunction
 
-       let malloc: offset list -> t -> t* int = fun l_o t -> t, 0
+       let malloc: offset list -> t -> t* int = fun l_o t -> 
+	 match t with
+	   | D_Top -> D_Top, 0
+	   | Disjunction l_t ->
+	       let i = List.fold_left (fun n tt -> max n (S.next tt)) 0 l_t in
+	       let t = Disjunction (List.map (fun tt -> S.var_alloc i l_o tt) l_t) in
+		 t, i
 
        let rec get_sc_hvalue: sc_hvalue -> int -> t -> t * int list * offset = fun e i t ->
 	 if debug then print_debug "DIS_DOMAIN: [rec] get_sc_hvalue %s\n" (sc_hvalue2str e);
