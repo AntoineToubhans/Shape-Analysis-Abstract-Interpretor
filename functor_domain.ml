@@ -128,10 +128,58 @@ module MAKE_DOMAIN =
 	     heap = heap;
 	     struct_defs = t.struct_defs;}
 
+       let filter: sc_cond -> t -> t * t = fun c t -> 
+	 if debug then print_debug "DOMAIN: filter %s\n" (sc_cond2str c);
+	 let ei, ej = 
+	   match c with | Eq(ei, ej) | Neq(ei, ej) -> ei, ej in
+	 let i = get_entry_point ei t and j = get_entry_point ej t 
+	 and l_o = get_fields (get_type ei t) t in 
+	 let heap1, heap2 = D.filter l_o i j c t.heap in
+	   {t with heap = heap1}, {t with heap = heap2}
 
-       let filter: sc_cond -> t -> t * t = fun c t -> t, t
+       let union: t -> t -> t = fun t1 t2 ->
+	 if debug then print_debug "DOMAIN: Union\n";
+	 (* t1.env & t2.env shoul'd be the same *)
+	 (* t1.struct_defs & t2.struct_defs shoul'd be the same *)
+	 { t1 with heap = D.union t1.heap t2.heap}
 
-       let eval_sc_command: sc_command -> t -> t = fun c t -> t
+       let widening: t -> t -> t = fun t1 t2 ->
+	 if debug then print_debug "DOMAIN: Widening\n";
+	 (* t1.env & t2.env shoul'd be the same *)
+	 (* t1.struct_defs & t2.struct_defs shoul'd be the same *)
+	 { t1 with heap = D.widening t1.heap t2.heap}
 
+       let rec eval_sc_command: t -> sc_command -> t = fun t c -> 
+	 if debug then print_debug "DOMAIN: [rec] eval command %s\n" (sc_command2str c);
+	 match c with
+	   | Assignment a ->
+	       eval_sc_assignment a t
+	   | StructDeclaration sd ->
+	       eval_sc_struct_decl sd t
+	   | VarDeclaration vd ->
+	       eval_sc_var_decl vd t 
+	   | Seq block -> 
+	       List.fold_left eval_sc_command t block
+	   | If(cond, b1, b2) ->
+	       let t1, t2 = filter cond t in
+	       let t1 = List.fold_left eval_sc_command t1 b1
+	       and t2 = List.fold_left eval_sc_command t2 b2 in
+	       union t1 t2
+	   | While(cond, block) -> 
+	       (* TO DO *)
+	       let t1, t2 = filter cond t in
+	       let t_entry_loop = ref t1 
+	       and t_mem = ref {t with heap = D.bottom} 
+	       and t_out = ref t2 in
+		 while (* not t_aft_loop >= t_entry_loop *) true do
+		   t_mem := !t_entry_loop;
+		   let t1, t2 = 
+		     filter cond 
+		       (union t 
+			  (List.fold_left eval_sc_command !t_entry_loop block)) in
+		     t_entry_loop := t1;
+		     t_out := t2;
+		 done; !t_out
+		 
 
      end: DOMAIN)

@@ -209,6 +209,9 @@ module type DOMAIN =
 
     val filter : sc_cond -> t -> t* t
 
-    val eval_sc_command: sc_command -> t -> t 
+    val union: t -> t -> t
+    val widening: t -> t -> t
+
+    val eval_sc_command: t -> sc_command -> t 
 
   end
