@@ -21,6 +21,9 @@ OCAMLFLAGS=     -warn-error a $(OCAMLINCLUDES)
 %.cmx: %.ml
 	$(OCAMLOPT) $(OCAMLFLAGS) -c $*.ml
 all: analyzer
+AUTOGEN_ML= 	parser.ml lexer.ml
+AUTOGEN_MLI=	parser.mli
+AUTOGEN=	$(AUTOGEN_ML) $(AUTOGEN_MLI)
 ML_FILES=	simple_C_syntax.ml \
 		utils.ml \
 		offset.ml \
@@ -30,12 +33,16 @@ ML_FILES=	simple_C_syntax.ml \
 		SL_graph_domain.ml \
 		SL_domain.ml \
 		SL_Functor_domain.ml \
-		functor_domain.ml
+		functor_domain.ml \
+		$(AUTOGEN_ML) \
+		main.ml
+MLI_FILES=	$(AUTOGEN_MLI)
+CMI_FILES=	$(MLI_FILES:%.mli=%.cmi) 
 CMX_FILES=      $(ML_FILES:%.ml=%.cmx)
 analyzer: $(CMX_FILES) 
 	ocamlopt $(CMX_FILES) -o analyzer
 clean: 
 	rm -f *.cmi *.cmx *.o && \
-	rm -f analyzer depend *~ debug.log \
-
+	rm -f analyzer *~ debug.log $(AUTOGEN) \
+	rm *.output
 

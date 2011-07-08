@@ -44,6 +44,8 @@ rule initial = parse
   | '&'         { ADDR }
   | "struct"	{ STRUCT }
   | "int"       { INT }
+  | "void"      { VOID }
+  | "main"      { MAIN }
   | "if"        { IF }
   | "else"      { ELSE }
   | "while"     { WHILE }
