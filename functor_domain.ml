@@ -23,13 +23,14 @@ module MAKE_DOMAIN =
        type t = 
 	   { env: int IntMap.t;
 	     heap: D.t;
-	     struct_defs: sc_struct_decl StringMap.t}
+	     var_decls: sc_var StringMap.t;
+	     struct_decls: sc_struct_decl StringMap.t}
 
        let rec get_type_hv: sc_hvalue -> t -> sc_type = fun e t ->
 	 if debug then print_debug "DOMAIN: [rec] get type of sc_hvalue %s \n" (sc_hvalue2str e);
 	 match e with
 	   | Var x ->
-	       x.var_type
+	       (StringMap.find x t.var_decls).var_type
 	   | ArrayAccess(i, e) ->
 	       begin
 		 match get_type_hv e t with
@@ -41,7 +42,7 @@ module MAKE_DOMAIN =
 	       begin
 		 match get_type_hv e t with
 		   | Struct s ->
-		       begin try List.assoc s (snd (StringMap.find s t.struct_defs))
+		       begin try List.assoc s (snd (StringMap.find s t.struct_decls))
 		       with | _ -> error "bad record field argument" 
 		       end 
 		   | _ -> error  
@@ -79,7 +80,7 @@ module MAKE_DOMAIN =
 	   | Struct s ->
 	       begin
 		 try
-		   List.map (fun (s, ty) -> RecordField(s, Zero)) (snd (StringMap.find s t.struct_defs))
+		   List.map (fun (s, ty) -> RecordField(s, Zero)) (snd (StringMap.find s t.struct_decls))
 		 with
 		   | _ -> error "bad record field argument"
 	       end
@@ -92,7 +93,7 @@ module MAKE_DOMAIN =
 	   | ArrayAccess (_, e) | FieldAccess(_, e) | Deref e ->
 	       get_entry_point_hv e t
 	   | Var x -> 
-	       IntMap.find x.var_uniqueId t.env
+	       IntMap.find (StringMap.find x t.var_decls).var_uniqueId t.env
 
        let get_entry_point_vv: sc_vvalue -> t -> int = fun e t ->
 	 if debug then print_debug "DOMAIN: get entry_point of sc_vvalue %s \n" (sc_vvalue2str e);
@@ -116,17 +117,18 @@ module MAKE_DOMAIN =
 	   { t with heap = D.mutation l_o l_o_malloc i j (la, ra) t.heap }
 
        let eval_sc_struct_decl: sc_struct_decl -> t -> t = fun s t -> 
-	 {t with struct_defs = StringMap.add (fst s) s t.struct_defs }
+	 {t with struct_decls = StringMap.add (fst s) s t.struct_decls }
 
        let eval_sc_var_decl: sc_var_decl -> t -> t = fun (x, oe) t -> 
 	 if debug then print_debug "DOMAIN: eval sc_var_decl %s \n" (sc_var_decl2str (x, oe));
-	 if IntMap.mem x.var_uniqueId t.env then
+	 if IntMap.mem x.var_uniqueId t.env || StringMap.mem x.var_name t.var_decls then
 	   error (Printf.sprintf "declaration of var %s : already exists..." (sc_var2str x));
 	 let fields = get_fields x.var_type t in
 	 let heap, i = D.malloc fields t.heap in
 	   { env = IntMap.add x.var_uniqueId i t.env;
 	     heap = heap;
-	     struct_defs = t.struct_defs;}
+	     var_decls = StringMap.add x.var_name x t.var_decls;
+	     struct_decls = t.struct_decls;}
 
        let filter: sc_cond -> t -> t * t = fun c t -> 
 	 if debug then print_debug "DOMAIN: filter %s\n" (sc_cond2str c);
@@ -140,13 +142,13 @@ module MAKE_DOMAIN =
        let union: t -> t -> t = fun t1 t2 ->
 	 if debug then print_debug "DOMAIN: Union\n";
 	 (* t1.env & t2.env shoul'd be the same *)
-	 (* t1.struct_defs & t2.struct_defs shoul'd be the same *)
+	 (* t1.struct_decls & t2.struct_decls shoul'd be the same *)
 	 { t1 with heap = D.union t1.heap t2.heap}
 
        let widening: t -> t -> t = fun t1 t2 ->
 	 if debug then print_debug "DOMAIN: Widening\n";
 	 (* t1.env & t2.env shoul'd be the same *)
-	 (* t1.struct_defs & t2.struct_defs shoul'd be the same *)
+	 (* t1.struct_decls & t2.struct_decls shoul'd be the same *)
 	 { t1 with heap = D.widening t1.heap t2.heap}
 
        let rec eval_sc_command: t -> sc_command -> t = fun t c -> 

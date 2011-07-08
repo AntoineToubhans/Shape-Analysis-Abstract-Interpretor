@@ -31,4 +31,63 @@
 %token DOT ARROW
 %token STAR ADDR
 %token STRUCT INT
+%token IF ELSE WHILE
+%token MALLOC NULL
 %token EOF
+
+%start main
+
+%type <sc_command> main command
+%type <sc_block> block
+%type <sc_type> sc_type
+%type <sc_cond> cond
+%type <sc_exp> expr
+%type <sc_vvalue> vvalue
+%type <sc_hvalue> hvalue
+%type <sc_var_decl> var_decl
+%type <sc_struct_decl> struct_decl
+
+%%
+
+main:
+                            { Seq [] }
+  | block                   { Seq $1 }           
+
+block: 
+                            { [] }
+  | command block           { $1::$2 }
+
+command:
+  hvalue EQ expr SEMICOLON  { Assignment ($1, $3) }
+  | var_decl                { VarDeclaration $1 }
+  | struct_decl             { StructDeclaration $1 }
+  | IF LPAREN cond RPAREN LBRACE block RBRACE ELSE LBRACE block RBRACE 
+                            { If ($3, $6, $10) }
+  | IF LPAREN cond RPAREN LBRACE block RBRACE 
+                            { If ($3, $6, []) }
+  | WHILE LPAREN cond RPAREN LBRACE block RBRACE
+                            { While ($3, $6) }
+
+sc_type:
+  INT                       { ScInt }
+  | sc_type STAR            { PointerTo $1 }
+  | STRUCT ID               { Struct $2 }
+
+cond:
+  expr EQ_EQ expr           { Eq ($1, $3) }
+  | expr BANG_EQ expr       { Neq ($1, $3) }
+
+expr:
+  hvalue                    { HValue $1 }
+  | vvalue                  { VValue $1 }
+
+vvalue:
+  MALLOC LPAREN CST_INT RPAREN  
+                            { Malloc $3 }
+  | ADDR hvalue             { Adress $2 }
+  | CST_INT                 { $1 }
+  | NULL                    { Null }
+
+hvalue:
+  LPAREN hvalue RPAREN      { $2 }
+  

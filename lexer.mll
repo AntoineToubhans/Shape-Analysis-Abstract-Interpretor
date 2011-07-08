@@ -23,7 +23,8 @@ let ident = (letter|'_')(letter|decdigit|'_')*
 
 rule initial = parse
     "/*"        { let _ = comment lexbuf in initial lexbuf }
-  | "//"        { let _ = line_comment lexbuf in initial lexbuf }
+  | "//"        { line lexbuf }
+  | "#"         { line lexbuf }
   | blank       { initial lexbuf }
   | intnum as x	{ CST_INT (int_of_string x) }
   | "!quit!"	{ EOF }
@@ -43,14 +44,19 @@ rule initial = parse
   | '&'         { ADDR }
   | "struct"	{ STRUCT }
   | "int"       { INT }
+  | "if"        { IF }
+  | "else"      { ELSE }
+  | "while"     { WHILE }
+  | "malloc"    { MALLOC }
+  | "NULL"      { NULL }
   | eof	        { EOF }
-  | ident       { ID ("") }  
+  | ident as s  { ID s }
   | _           { raise Non_supported }
 
 
-and line_comment = parse
-    "\n"        { () }
-  | _           { line_comment lexbuf }
+and line = parse
+    "\n"        { initial lexbuf }
+  | _           { line lexbuf }
 
 (* TO DO *)
 and comment = parse
