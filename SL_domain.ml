@@ -303,7 +303,7 @@ module MAKE_SL_DOMAIN =
        (*  - j.c(b) *== k.c(c)  | --> i.c(a) *== k.c(c)  *)
        (*  - pred j = true      |                        *)
        let try_modus_ponens: int -> (int -> bool) -> t -> t option = fun i pred (g, p) -> 
-	 if debug then print_debug "SL_DOMAIN: try modus ponens at %i t\n" i;
+ 	 if debug then print_debug "SL_DOMAIN: try modus ponens at %i t\n" i;
 	 try
 	   let ind0 = get (G.get_inductive i g) in
 	     if pred ind0.target then failwith "predicate failure";
@@ -325,8 +325,20 @@ module MAKE_SL_DOMAIN =
 	       if debug then print_debug "SL_DOMAIN: failed modus ponens at node %i\n" i;
 	       None
 
-       let canonicalize: t -> t = fun t -> t
-(* if P.is_live ind0.target p || G.is_reached ind0.target (fun j->i!=j) g then failwith ""; *)
+       let canonicalize: t -> t = fun t -> 
+ 	 if debug then print_debug "SL_DOMAIN: CANONICALIZATION\n";
+	 let pred t j i = P.is_live i (snd t) || G.is_reached i (fun k->k!=j) (fst t) in
+	 let nodes = ref (G.domain (fst t)) and rt = ref t in
+	   (* first try to fold at every nodes *)
+	   IntSet.iter (fun i -> map_default (fun x-> rt:= x) () (try_fold i !rt)) !nodes;
+	   (* then we try modus ponens *)
+	   while not (IntSet.is_empty !nodes) do
+	     let i = IntSet.choose !nodes in
+	       match try_modus_ponens i (pred !rt i) !rt with
+		 | Some t -> rt:= t;
+		 | None -> nodes:= IntSet.remove i !nodes;
+	   done;
+	   !rt
 
        let pp: t -> string = fun (g, p) -> 
 	 Printf.sprintf 
