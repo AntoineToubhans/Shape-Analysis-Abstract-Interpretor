@@ -1,6 +1,6 @@
 OCAMLPREFIX=
 OCAMLC=         $(OCAMLPREFIX)ocamlc
-OCAMLOPT=       $(OCAMLPREFIX)ocamlopt
+OCAMLOPT=       $(OCAMLPREFIX)ocamlopt.opt
 OCAMLYACC=      $(OCAMLPREFIX)ocamlyacc -v
 OCAMLLEX=       $(OCAMLPREFIX)ocamllex
 OCAMLDEP=       $(OCAMLPREFIX)ocamldep

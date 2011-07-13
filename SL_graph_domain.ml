@@ -15,7 +15,7 @@ module SL_GRAPH_DOMAIN =
      
      type node =
 	 { edges: int OffsetMap.t;
-	   inductive : inductive option;}
+	   inductive : Inductive.t option;}
 
      type t =    
 	 { nodes  : node IntMap.t;
@@ -64,18 +64,18 @@ module SL_GRAPH_DOMAIN =
        if debug then print_debug "SL_GRAPH_DOMAIN:update_edge %i %s %i t\n" i (pp_offset o) j;
        add_edge i o j (remove_edge i o t)
 
-     let add_inductive: int -> inductive -> t -> t = fun i ind t ->
+     let add_inductive: int -> Inductive.t -> t -> t = fun i ind t ->
        if debug then print_debug "SL_GRAPH_DOMAIN:add_inductive %i ind t\n" i;
        try
 	 let n = IntMap.find i t.nodes in
 	   if has (n.inductive) then error 
 	     (Printf.sprintf "Separation issue: %i already has an inductive" i);
 	   { nodes = IntMap.add i {n with inductive = Some ind } t.nodes;
-	     next = max t.next (maxlist (get_domain_inductive ind) + 1)}
+	     next = max t.next (maxlist (Inductive.get_domain ind) + 1)}
        with
 	 | Not_found ->
 	     { nodes = IntMap.add i {edges = OffsetMap.empty; inductive = Some ind;} t.nodes;
-	       next = max t.next (maxlist (i::get_domain_inductive ind) + 1);} 
+	       next = max t.next (maxlist (i::Inductive.get_domain ind) + 1);} 
 
      let remove_inductive: int -> t -> t = fun i t ->
        if debug then print_debug "SL_GRAPH_DOMAIN:remove_inductive %i t\n" i;
@@ -88,7 +88,7 @@ module SL_GRAPH_DOMAIN =
 	     error 
 	       (Printf.sprintf "Separation issue: %i has no inductive, can't be removed" i)
 	       
-    let update_inductive: int -> inductive -> t -> t = fun i ind t ->
+    let update_inductive: int -> Inductive.t -> t -> t = fun i ind t ->
       if debug then print_debug "SL_GRAPH_DOMAIN:update_inductive %i ind t\n" i;
       add_inductive i ind (remove_inductive i t)
 
@@ -119,10 +119,10 @@ module SL_GRAPH_DOMAIN =
 	    if debug then print_debug "SL_GRAPH_DOMAIN:get_edge %i %s t.....None\n" i (pp_offset o);
 	    None
 	      
-    let get_inductive: int -> t -> inductive option = fun i t ->
+    let get_inductive: int -> t -> Inductive.t option = fun i t ->
       try
 	let ind = get (IntMap.find i t.nodes).inductive in
-	  if debug then print_debug "SL_GRAPH_DOMAIN:get_inductive %i t.....[%i.%s]\n" i i (pp_inductive ind);
+	  if debug then print_debug "SL_GRAPH_DOMAIN:get_inductive %i t.....[%i.%s]\n" i i (Inductive.pp ind);
 	  Some ind
       with 
 	| Not_found | No_value ->
@@ -179,19 +179,17 @@ module SL_GRAPH_DOMAIN =
     let fusion: int -> int -> t -> t = fun i j t ->
       if debug then print_debug "SL_GRAPH_DOMAIN:fusion %i %i t\n" i j;
       let change_index = fun k-> if i==k then j else k in
-      let change_inductive = function | None -> None | Some ind ->
-	Some
-	  { target = change_index ind.target;
-	    source_parameters = List.map change_index ind.source_parameters;
-	    target_parameters = List.map change_index ind.target_parameters;
-	    length = ind.length;} in
+      let change_inductive = Inductive.change_index change_index in
       let change_node = fun n -> 
 	{ edges = OffsetMap.map change_index n.edges;
-	  inductive = change_inductive n.inductive;} 
+	  inductive = 
+	    match n.inductive with
+	      | Some ind -> Some (change_inductive ind)
+	      | _ -> None;} 
       and merging: int option -> int option -> int option = 
 	function | None -> (fun x -> x) | x -> (function | None -> x | _ -> raise Bottom) 
       (* I had to duplicate merging 'a option -> 'a option -> 'a option, doesn't work otherwise... *)
-      and merging0: inductive option -> inductive option -> inductive option = 
+      and merging0: Inductive.t option -> Inductive.t option -> Inductive.t option = 
  	function | None -> (fun x -> x) | x -> (function | None -> x | _ -> raise Bottom) in
       let merge_node: node -> node -> node = fun n m ->
 	{edges = OffsetMap.merge (fun o -> merging) n.edges m.edges;
@@ -224,10 +222,10 @@ module SL_GRAPH_DOMAIN =
     (* is the node reached by some j such that: *)
     (*  -  j.c(a) *== i.c(b)                    *)
     (*  -  pred j a b                           *)
-    let is_reached_by_inductive: int -> (int -> inductive -> bool) -> t -> bool = fun i p t -> 
+    let is_reached_by_inductive: int -> (int -> Inductive.t -> bool) -> t -> bool = fun i p t -> 
       if debug then print_debug "SL_GRAPH_DOMAIN: is_reached_by_inductive %i p t\n" i;
       IntMap.exists
-	(fun j n -> has n.inductive && (get n.inductive).target==i && p i (get n.inductive))
+	(fun j n -> has n.inductive && (get n.inductive).Inductive.target==i && p i (get n.inductive))
 	t.nodes
 
     let is_reached: int -> (int -> bool) -> t -> bool = fun i p t ->
@@ -246,8 +244,8 @@ module SL_GRAPH_DOMAIN =
 	  map_default 
 	    (fun ind->
 	       List.fold_left (fun dom i -> add i dom)
-		 (List.fold_left (fun dom i -> add i dom) (IntSet.add ind.target dom) ind.source_parameters)
-		 ind.target_parameters) 
+		 (List.fold_left (fun dom i -> add i dom) (IntSet.add ind.Inductive.target dom) ind.Inductive.source_parameters)
+		 ind.Inductive.target_parameters) 
 	    dom n.inductive
       in
 	IntMap.fold fffold t.nodes IntSet.empty
@@ -257,7 +255,7 @@ module SL_GRAPH_DOMAIN =
        let f = fun o j s -> Printf.sprintf "%s %i%s|---> %i\n" s i (pp_offset o) j in
        let s = OffsetMap.fold f n.edges s in 
 	 map_default
-	   (fun ind -> Printf.sprintf "%s %i.%s\n" s i (pp_inductive ind)) s n.inductive
+	   (fun ind -> Printf.sprintf "%s %i.%s\n" s i (Inductive.pp ind)) s n.inductive
 	      
      let pp: t -> string = fun t ->
        let s = Printf.sprintf "     ---Print SL_GRAPH_DOMAIN---\nNext free node:%i\n" t.next in

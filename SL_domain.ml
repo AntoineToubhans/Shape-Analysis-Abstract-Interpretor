@@ -9,7 +9,7 @@ open Inductive_def
 (* Module SL_Domain                                            *)
 (* =========================================================== *)
 (*                                        Created: AT 06/10/11 *)
-(*                                  Last modified: AT 06/23/11 *)
+(*                                  Last modified: AT 07/13/11 *)
 
 
 let error(s: string) = failwith (Printf.sprintf "SL_DOMAIN_ERROR: %s" s)
@@ -36,7 +36,7 @@ module MAKE_SL_DOMAIN =
 	   let p = 
 	     List.fold_left2 
 	       (fun g x y -> P.add_eq x y g)
-	       (P.add_eq i ind.target p) ind.source_parameters ind.target_parameters in
+	       (P.add_eq i ind.Inductive.target p) ind.Inductive.source_parameters ind.Inductive.target_parameters in
 	     (G.remove_inductive i g, p)
 	 with
 	   | No_value -> 
@@ -69,24 +69,25 @@ module MAKE_SL_DOMAIN =
 	   if i==j then (g, p), true else  
 	     match opt_ind_i, opt_ind_j, i, j with
 	       | Some ind_i, Some ind_j, _, _ ->
-		   if ind_i.length>0 && ind_j.length>0 then raise Bottom;
-		   if ind_i.length>0 then 
+		   if Inductive.is_positive ind_i && Inductive.is_positive ind_j then 
+		     raise Bottom;
+		   if Inductive.is_positive ind_i then 
 		     let g, p = nullify_inductive j (g, p) in do_fusion i j g p
-		   else if ind_j.length>0 then
+		   else if Inductive.is_positive ind_j then
 		     let g, p = nullify_inductive i (g, p) in do_fusion i j g p
-		   else if ind_i.target == j then
+		   else if ind_i.Inductive.target == j then
 		     (* i ==> j ==> k  can be handled directly *)
 		     let g, p = nullify_inductive i (g, p) in do_fusion i j g p
-		   else if ind_j.target == i then 
+		   else if ind_j.Inductive.target == i then 
 		     (* j ==> i ==> k  can be handled directly *)
 		     let g, p = nullify_inductive j (g, p) in do_fusion i j g p
 		   else raise (Split (true, i))
 	       | _, Some ind_j, 0, _ -> 
-		   if ind_j.length>0 then raise Bottom;
+		   if Inductive.is_positive ind_j then raise Bottom;
 		   let g, p = nullify_inductive j (g, p) in 
 		     do_fusion j 0 g p
 	       | Some ind_i, _, _, 0 -> 
-		   if ind_i.length>0 then raise Bottom;
+		   if Inductive.is_positive ind_i then raise Bottom;
 		   let g, p = nullify_inductive i (g, p) in
 		     do_fusion i 0 g p
 	       | _, _, _, _ -> 
@@ -123,7 +124,7 @@ module MAKE_SL_DOMAIN =
        let is_bottom: t -> bool = fun (g, p) -> 
 	 let check_node i = 
 	   let opt_ind = G.get_inductive i g in
-	     (has opt_ind && (get opt_ind).length>0) 
+	     (has opt_ind && Inductive.is_positive (get opt_ind)) 
 	     || List.exists (fun o -> G.has_edge i o g) D.domain_offset in
 	 let b_result = P.is_bottom p || G.for_all check_node g in
 	   if debug && b_result then print_debug "SL_DOMAIN: is t bottom?.....Yes\n"; 
@@ -155,19 +156,19 @@ module MAKE_SL_DOMAIN =
 	 if debug then print_debug "SL_DOMAIN: case_inductive_forward %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
-	     if ind.length!=0 then raise No_value;
+	     if ind.Inductive.length!=Inductive.Unknown then raise No_value;
 	     let args, g0 = G.create_n_fresh_nodes D.number_of_parameters g in
 	     let j, g0 = G.create_fresh_node g0 in
 	     let ind0 = 
-	       { target = j;
-		 source_parameters = ind.source_parameters;
-		 target_parameters = args;
-		 length = 1;}
+	       { Inductive.target = j;
+		 Inductive.source_parameters = ind.Inductive.source_parameters;
+		 Inductive.target_parameters = args;
+		 length = Inductive.Length 1;}
 	     and ind1 =  
-	       { target = ind.target;
-		 source_parameters = args;
-		 target_parameters = ind.target_parameters;
-		 length = 0;} in
+	       { Inductive.target = ind.Inductive.target;
+		 Inductive.source_parameters = args;
+		 Inductive.target_parameters = ind.Inductive.target_parameters;
+		 length = Inductive.Unknown;} in
 	     let g0 = G.add_inductive j ind1 (G.update_inductive i ind0 g0) in
 	       (g0, p), (nullify_inductive i (g, p))
 	 with
@@ -178,19 +179,19 @@ module MAKE_SL_DOMAIN =
 	 if debug then print_debug "SL_DOMAIN: case_inductive_backward %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
-	     if ind.length!=0 then raise No_value;
+	     if ind.Inductive.length!=Inductive.Unknown then raise No_value;
 	     let args, g0 = G.create_n_fresh_nodes D.number_of_parameters g in
 	     let j, g0 = G.create_fresh_node g0 in
 	     let ind0 = 
-	       { target = j;
-		 source_parameters = ind.source_parameters;
-		 target_parameters = args;
-		 length = 0;}
+	       { Inductive.target = j;
+		 Inductive.source_parameters = ind.Inductive.source_parameters;
+		 Inductive.target_parameters = args;
+		 Inductive.length = Inductive.Unknown;}
 	     and ind1 =  
-	       { target = ind.target;
-		 source_parameters = args;
-		 target_parameters = ind.target_parameters;
-		 length = 1;} in
+	       { Inductive.target = ind.Inductive.target;
+		 Inductive.source_parameters = args;
+		 Inductive.target_parameters = ind.Inductive.target_parameters;
+		 Inductive.length = Inductive.Length 1;} in
 	     let g0 = G.add_inductive j ind1 (G.update_inductive i ind0 g0) in
 	       (g0, p), (nullify_inductive i (g, p))
 	 with
@@ -201,19 +202,23 @@ module MAKE_SL_DOMAIN =
 	 if debug then print_debug "SL_DOMAIN: split_inductive_backward %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
-	     if ind.length<2 then raise No_value;
+	   let length = 
+	     match ind.Inductive.length with 
+	       | Inductive.Length i -> i
+	       | _ -> raise No_value in
+	     if length < 2 then raise No_value;
 	     let args, g = G.create_n_fresh_nodes D.number_of_parameters g in
 	     let j, g = G.create_fresh_node g in
 	     let ind0 = 
-	       { target = j;
-		 source_parameters = ind.source_parameters;
-		 target_parameters = args;
-		 length = ind.length-1;}
+	       { Inductive.target = j;
+		 Inductive.source_parameters = ind.Inductive.source_parameters;
+		 Inductive.target_parameters = args;
+		 Inductive.length = Inductive.Length (length-1);}
 	     and ind1 =  
-	       { target = ind.target;
-		 source_parameters = args;
-		 target_parameters = ind.target_parameters;
-		 length = 1;} in
+	       { Inductive.target = ind.Inductive.target;
+		 Inductive.source_parameters = args;
+		 Inductive.target_parameters = ind.Inductive.target_parameters;
+		 Inductive.length = Inductive.Length 1;} in
 	     let g = G.add_inductive j ind1 (G.update_inductive i ind0 g) in
 	       g, p
 	 with
@@ -227,24 +232,32 @@ module MAKE_SL_DOMAIN =
 	 if debug then print_debug "SL_DOMAIN: try_unfold %i t\n" i;
  	 try
 	   let ind = get (G.get_inductive i g) in
-	     if ind.length==0 then raise (Split (true, i));
-	     let g = G.remove_inductive i g in
-	     let fresh, g = G.create_n_fresh_nodes D.number_of_fresh g in
-	     let g = List.fold_left2
-	       (fun g j o -> G.add_edge i o j g) g fresh D.def_points_to_fresh in
-	     let g = List.fold_left2
-	       (fun g j o -> G.add_edge i o j g) g ind.source_parameters D.def_points_to_parameters
-	     and ind =
-	       { target = ind.target;
-		 source_parameters = D.new_parameters i ind.source_parameters fresh;
-		 target_parameters = ind.target_parameters;
-		 length = ind.length - 1;} in
-	     let g = G.add_inductive (List.hd fresh) ind g in
-	       (* we reduced if the inductive has zero length *)
-	     let g, p = if ind.length==0 then nullify_inductive (List.hd fresh) (g, p) else g, p in
-	     let p = P.add_neq 0 i p in
-	       if debug then print_debug "SL_DOMAIN: unfold successfull at %i t\n" i;
-	       g, p
+	   let length = 
+	     match ind.Inductive.length with 
+	       | Inductive.Length i -> i
+	       | Inductive.Unknown -> raise (Split (true, i)) in
+	   let g = G.remove_inductive i g in
+	   let fresh, g = G.create_n_fresh_nodes D.number_of_fresh g in
+	   let g = List.fold_left2
+	     (fun g j o -> G.add_edge i o j g) g fresh D.def_points_to_fresh in
+	   let g = List.fold_left2
+	     (fun g j o -> G.add_edge i o j g) 
+	     g ind.Inductive.source_parameters D.def_points_to_parameters
+	   and ind =
+	     { Inductive.target = ind.Inductive.target;
+	       Inductive.source_parameters = 
+		 D.new_parameters i ind.Inductive.source_parameters fresh;
+	       Inductive.target_parameters = ind.Inductive.target_parameters;
+	       Inductive.length = Inductive.Length (length-1);} in
+	   let g = G.add_inductive (List.hd fresh) ind g in
+	     (* we reduced if the inductive has zero length *)
+	   let g, p = if length==1 then 
+	     nullify_inductive (List.hd fresh) (g, p) 
+	   else 
+	     g, p in
+	   let p = P.add_neq 0 i p in
+	     if debug then print_debug "SL_DOMAIN: unfold successfull at %i t\n" i;
+	     g, p
 	 with
 	   | No_value ->
 	       error (Printf.sprintf "unfold failed at %i (there's no inductive)" i)
@@ -282,14 +295,19 @@ module MAKE_SL_DOMAIN =
 	   and pt_fresh = 
 	     List.map (fun o -> get (G.get_edge i o g)) D.def_points_to_fresh in
 	   let ind =
-	     { target = List.hd pt_fresh;
-	       source_parameters = pt_parameters;
-	       target_parameters = D.new_parameters i pt_parameters pt_fresh;
-	       length = 1;} in
+	     { Inductive.target = List.hd pt_fresh;
+	       Inductive.source_parameters = pt_parameters;
+	       Inductive.target_parameters = 
+		 D.new_parameters i pt_parameters pt_fresh;
+	       Inductive.length = Inductive.Length 1;} in
 	   let g = 
-	     List.fold_left (fun g o -> G.remove_edge i o g) g D.def_points_to_parameters in
+	     List.fold_left 
+	       (fun g o -> G.remove_edge i o g) 
+	       g D.def_points_to_parameters in
 	   let g = 
-	     List.fold_left (fun g o -> G.remove_edge i o g) g D.def_points_to_fresh in
+	     List.fold_left 
+	       (fun g o -> G.remove_edge i o g) 
+	       g D.def_points_to_fresh in
 	   let g = G.add_inductive i ind g in
 	     if debug then print_debug "SL_DOMAIN: successful folding at node %i\n" i;
 	     Some(g, p)
@@ -306,16 +324,23 @@ module MAKE_SL_DOMAIN =
  	 if debug then print_debug "SL_DOMAIN: try modus ponens at %i t\n" i;
 	 try
 	   let ind0 = get (G.get_inductive i g) in
-	     if pred ind0.target then failwith "predicate failure";
-	     let ind1 = get (G.get_inductive ind0.target g) in
-	       if List.exists2 (fun x y -> x!=y) ind0.target_parameters ind1.source_parameters
+	     if pred ind0.Inductive.target then failwith "predicate failure";
+	     let ind1 = get (G.get_inductive ind0.Inductive.target g) in
+	       if List.exists2 (fun x y -> x!=y) 
+		 ind0.Inductive.target_parameters 
+		 ind1.Inductive.source_parameters
 	       then failwith "arguments don't match";
 	       let ind = 
-		 { target = ind1.target;
-		   source_parameters = ind0.source_parameters;
-		   target_parameters = ind1.target_parameters;
-		   length = if ind0.length==0 || ind1.length==0 then 0 else ind0.length+ind1.length;} in
-	       let g = (G.remove_inductive i (G.remove_inductive ind0.target g)) in
+		 { Inductive.target = ind1.Inductive.target;
+		   Inductive.source_parameters = ind0.Inductive.source_parameters;
+		   Inductive.target_parameters = ind1.Inductive.target_parameters;
+		   Inductive.length = 
+		     Inductive.add_length 
+		       ind0.Inductive.length
+		       ind1.Inductive.length;} in
+	       let g = 
+		 (G.remove_inductive i 
+		    (G.remove_inductive ind0.Inductive.target g)) in
 		 Some (G.add_inductive i ind g, p)
 	 with 
 	   | Failure s ->  

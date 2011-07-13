@@ -4,26 +4,56 @@
 open Offset
 open Utils
 open Simple_C_syntax
-  
-type inductive = 
-    { target: int;
-      source_parameters: int list;
-      target_parameters: int list;
-      (* length is optional,                                    *)
-      (* 0 means we don't know how long is the sequence         *)
-      (* 0 long sequence are forbidden, and immediately reduced *)
-      length: int;}
+
+module Inductive = 
+  struct
+
+    type inductive_length = 
+      | Unknown | Length of int
+
+    let add_length x y = match x, y with
+      | Length i, Length j -> Length (i+j)
+      | _, _ -> Unknown
+	  
+    type t = 
+	{ target: int;
+	  source_parameters: int list;
+	  target_parameters: int list;
+	  length: inductive_length;}
+	  
+    let is_positive: t -> bool = fun ind -> 
+      match ind.length with
+	| Unknown -> false
+	| Length i -> (i > 0)
       
-let pp_inductive: inductive -> string = fun ind ->
-  Printf.sprintf "ind(%s) *=%s= %i.ind(%s)" 
-    (pp_list ind.source_parameters) 
-    (if ind.length==0 then "" else (Printf.sprintf "%i" ind.length)) 
-    ind.target (pp_list ind.target_parameters)
-    
-let get_domain_inductive: inductive -> int list = fun ind ->
-  ind.target::(List.append ind.source_parameters ind.target_parameters)
-    
-    
+    let change_index: (int -> int) -> t -> t = fun f ind ->
+      { target = f ind.target;
+	source_parameters = List.map f ind.source_parameters;
+	target_parameters = List.map f ind.target_parameters;
+	length = ind.length;}
+
+    let pp: t -> string = fun ind ->
+      Printf.sprintf "ind(%s) *=%s= %i.ind(%s)" 
+	(pp_list ind.source_parameters) 
+	(match ind.length with | Unknown -> "" | Length i -> Printf.sprintf "%i" i) 
+	ind.target (pp_list ind.target_parameters)
+	
+    let get_domain: t -> int list = fun ind ->
+      ind.target::(List.append ind.source_parameters ind.target_parameters)
+	
+  end
+
+(* request to split an inductive *)
+(*      Split true, i :          *)
+(* i ===_===> j                  *)
+(*      -> fusion i j            *)
+(*      -> i===1===> k===_===> j *)
+(*      Split true, i :          *)
+(* i ===_===> j                  *)
+(*      -> fusion i j            *)
+(*      -> i===_===> k===1===> j *)
+exception Split of bool*int
+     
 module type SL_GRAPH_DOMAIN =
   sig      
     type t
@@ -39,16 +69,16 @@ module type SL_GRAPH_DOMAIN =
     (* update i o j t <=> add i o j (remove i o t) *)
     val update_edge: int -> offset -> int -> t -> t
 
-    val add_inductive: int -> inductive -> t -> t
+    val add_inductive: int -> Inductive.t -> t -> t
     val remove_inductive: int -> t -> t
-    val update_inductive: int -> inductive -> t -> t
+    val update_inductive: int -> Inductive.t -> t -> t
 
     val create_fresh_node: t -> int* t
     val create_fresh_node_index: int -> t -> t
     val create_n_fresh_nodes: int -> t -> int list*t
 
     val get_edge: int -> offset -> t -> int option
-    val get_inductive: int -> t -> inductive option
+    val get_inductive: int -> t -> Inductive.t option
 
     val has_edge: int -> offset -> t -> bool
     val has_edges: int -> t -> bool
@@ -64,7 +94,7 @@ module type SL_GRAPH_DOMAIN =
     val fusion: int -> int -> t -> t
 
     val is_reached_by_edge: int -> (int -> offset -> bool) -> t -> bool
-    val is_reached_by_inductive: int -> (int -> inductive -> bool) -> t -> bool
+    val is_reached_by_inductive: int -> (int -> Inductive.t -> bool) -> t -> bool
     val is_reached: int -> (int -> bool) -> t -> bool
 
     val domain: t -> IntSet.t
@@ -165,17 +195,6 @@ sig
     val mk: G.t -> P.t -> t
   end
 
-(* request to split an inductive *)
-(*      Split true, i :          *)
-(* i ===_===> j                  *)
-(*      -> fusion i j            *)
-(*      -> i===1===> k===_===> j *)
-(*      Split true, i :          *)
-(* i ===_===> j                  *)
-(*      -> fusion i j            *)
-(*      -> i===_===> k===1===> j *)
-exception Split of bool*int
- 
 module type DIS_DOMAIN = 
   sig
 
