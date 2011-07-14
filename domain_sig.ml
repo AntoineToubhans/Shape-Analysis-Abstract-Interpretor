@@ -84,6 +84,10 @@ module type SL_GRAPH_DOMAIN =
     val has_edges: int -> t -> bool
     val has_inductive: int -> t -> bool
 
+    (* check a predicate over one node *)
+    val for_all_edges: (offset -> int -> bool) -> int -> t -> bool
+    val exists_edge: (offset -> int -> bool) -> int -> t -> bool 
+
     (* check a predicate over all the nodes *)
     val for_all: (int -> bool) -> t -> bool
     val exists: (int -> bool) -> t -> bool 

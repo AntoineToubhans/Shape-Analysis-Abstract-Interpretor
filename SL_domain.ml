@@ -273,8 +273,20 @@ module MAKE_SL_DOMAIN =
 	     let g, p = unfold i (g, p) in
 	       (* this can NOT fail *)
 	       get (G.get_edge i o g), (g, p)
-	   else (* if............................................ *)
-	     raise Top
+	   else 
+	     (* we get all the nodes j s.t.   *)
+	     (*  j.ind(_) *= _.ind(d1,...,dn) *)
+	     (*  i = some dk                  *)
+	     let candidates = 
+	       G.get_node  
+		 (fun j -> 
+		    match G.get_inductive j g with
+		      | None -> false
+		      | Some ind -> 
+			  List.mem i ind.Inductive.target_parameters) g in 
+	       if false then 0, (g, p)
+	       else (* if............................................ *)
+		 raise Top
 
        let mutate: int -> offset -> int -> t -> t = fun i o j (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: mutate [%i%s := %i]\n" i (pp_offset o) j;

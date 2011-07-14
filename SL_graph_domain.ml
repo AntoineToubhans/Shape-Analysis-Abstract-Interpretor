@@ -150,6 +150,19 @@ module SL_GRAPH_DOMAIN =
 	if debug && b then print_debug "SL_GRAPH_DOMAIN:has_inductive %i t.....Yes\n" i;
 	if debug && not b then print_debug "SL_GRAPH_DOMAIN:has_inductive %i t.....No\n" i;
 	b
+
+
+    let for_all_edges: (offset -> int -> bool) -> int -> t -> bool = fun p i t ->
+      try 
+	OffsetMap.for_all p (IntMap.find i t.nodes).edges
+      with
+	| Not_found -> true
+
+    let exists_edge: (offset -> int -> bool) -> int -> t -> bool = fun p i t ->
+      try 
+	OffsetMap.exists p (IntMap.find i t.nodes).edges
+      with
+	| Not_found -> false
 	      
     let for_all: (int -> bool) -> t -> bool = fun p t ->
       IntMap.for_all (fun i n -> p i) t.nodes
