@@ -48,7 +48,7 @@ module Inductive =
 (* i ===_===> j                  *)
 (*      -> fusion i j            *)
 (*      -> i===1===> k===_===> j *)
-(*      Split true, i :          *)
+(*      Split false, i :         *)
 (* i ===_===> j                  *)
 (*      -> fusion i j            *)
 (*      -> i===_===> k===1===> j *)

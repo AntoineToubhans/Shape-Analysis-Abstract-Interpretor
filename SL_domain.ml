@@ -9,7 +9,7 @@ open Inductive_def
 (* Module SL_Domain                                            *)
 (* =========================================================== *)
 (*                                        Created: AT 06/10/11 *)
-(*                                  Last modified: AT 07/13/11 *)
+(*                                  Last modified: AT 07/14/11 *)
 
 
 let error(s: string) = failwith (Printf.sprintf "SL_DOMAIN_ERROR: %s" s)
@@ -283,6 +283,9 @@ module MAKE_SL_DOMAIN =
 		    match G.get_inductive j g with
 		      | None -> false
 		      | Some ind -> 
+			  (* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! *)
+			  if not (Inductive.is_positive ind) then
+			    raise (Split (false, j));
 			  List.mem i ind.Inductive.target_parameters) g in 
 	       if false then 0, (g, p)
 	       else 
