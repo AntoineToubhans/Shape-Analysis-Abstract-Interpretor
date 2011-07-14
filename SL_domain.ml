@@ -285,7 +285,8 @@ module MAKE_SL_DOMAIN =
 		      | Some ind -> 
 			  List.mem i ind.Inductive.target_parameters) g in 
 	       if false then 0, (g, p)
-	       else (* if............................................ *)
+	       else 
+		 (* if............................................ *)
 		 raise Top
 
        let mutate: int -> offset -> int -> t -> t = fun i o j (g, p) ->
