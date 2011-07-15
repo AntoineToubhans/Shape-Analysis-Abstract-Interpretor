@@ -93,6 +93,8 @@ module type SL_GRAPH_DOMAIN =
     val exists: (int -> bool) -> t -> bool 
     val get_node: (int -> bool) -> t -> int list
 
+    val fold: (int -> 'a -> 'a) -> t -> 'a -> 'a 
+
     val find: int -> offset -> t -> (offset * int) list
 
     val fusion: int -> int -> t -> t

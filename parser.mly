@@ -39,7 +39,13 @@
 %token VOID MAIN
 %token EOF 
 
+%left LBRACKET
+%left STAR ADDR
+%left DOT ARROW
+
 %start main file
+
+
 
 %type <Simple_C_syntax.sc_command> file main command 
 %type <sc_block> block
@@ -103,6 +109,7 @@ hvalue:
                             { ArrayAccess ($3, $1) }
   | hvalue DOT ID           { FieldAccess ($3, $1) }
   | STAR hvalue             { Deref $2 }
+  | hvalue ARROW ID         { FieldAccess ($3, Deref $1) }
 
 var_decl:
   p_type ID EQ expr SEMICOLON        

@@ -268,29 +268,78 @@ module MAKE_SL_DOMAIN =
 	 if debug then print_debug "SL_DOMAIN: search for %i%s\n" i (pp_offset o);
 	 try get (G.get_edge i o g), (g, p) 
 	 with | No_value ->
-	   if List.mem o D.domain_offset && G.has_inductive i g then
+	   if not (List.mem o D.domain_offset) then
+	     (* in this case, we can't do much better... *)
+	     raise Top;
+	   if G.has_inductive i g then
 	     (* unfold can fail or raise Split *)
 	     let g, p = unfold i (g, p) in
 	       (* this can NOT fail *)
 	       get (G.get_edge i o g), (g, p)
 	   else 
+	   (* first we check wether         *)
+	   (*  D.F(node, args, fresh)       *)
+	   (*  contains node somewhere      *)
+	   (*  !!! kinda ugly style there ! *)
+	   let rec mk i n acc = 
+	     if n==0 then acc else mk i (n-1) (i::acc) in
+	   let l = 
+	     D.new_parameters 
+	       1 (mk 0 D.number_of_parameters [])
+	       (mk 0 D.number_of_fresh []) in
+	   let rec get0 n l acc = 
+	     match l with 
+	       | [] -> acc 
+	       | 1::l -> get0 (n+1) l (n::acc) 
+	       | _::l -> get0 (n+1) l acc in
+	   let pos_back = get0 0 l [] in
 	     (* we get all the nodes j s.t.   *)
 	     (*  j.ind(_) *= _.ind(d1,...,dn) *)
 	     (*  i = some dk                  *)
-	     let candidates = 
-	       G.get_node  
-		 (fun j -> 
+	     if pos_back=[] then 
+	       (* backtrack unfold research WILL fail *)
+	       raise Top;
+	     let p_candidates, u_candidates =  
+	       G.fold
+		 (fun j (p, u) -> 
 		    match G.get_inductive j g with
-		      | None -> false
-		      | Some ind -> 
-			  (* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! *)
-			  if not (Inductive.is_positive ind) then
-			    raise (Split (false, j));
-			  List.mem i ind.Inductive.target_parameters) g in 
-	       if false then 0, (g, p)
-	       else 
-		 (* if............................................ *)
-		 raise Top
+		      | None -> p, u
+		      | Some ind ->
+			  if List.exists
+			    (fun n -> List.nth ind.Inductive.target_parameters n=i) 
+			    pos_back then
+			      if ind.Inductive.length=Inductive.Unknown then
+				p, (j::u)
+			      else
+				(j::p), u
+			  else
+			    p, u)
+		 g ([], []) in 
+	       (* so far, we have computed the set of candidates *)
+	       (* - either it's empty: we raise Top              *)
+	       (* - either it conatains one elements:            *)
+	       (*   we try backward unfolding                    *)
+	       (* - either it contains more elements:            *)
+	       (*   we've to deal with conflicts...              *)
+	       match p_candidates with
+		 | [] -> 
+		     if u_candidates=[] then 
+		       raise Top
+		     else
+		       raise (Split(false, List.hd u_candidates))
+		 | [j] ->
+		     let g, p, j =
+		       let ind = get (G.get_inductive j g) in 
+			 if ind.Inductive.length = Inductive.Length 1 then
+			   g, p, j
+			 else
+			   (* we have a finite inductive of length > 1 *)
+			   let g, p = split_inductive_backward j (g, p) in
+			     g, p, (get (G.get_inductive j g)).Inductive.target in 
+		     let g, p = unfold j (g, p) in
+		       (* we MUST have i=j in P *)
+		       get (G.get_edge j o g), (g, p)
+		 | j::_ -> raise Bottom
 
        let mutate: int -> offset -> int -> t -> t = fun i o j (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: mutate [%i%s := %i]\n" i (pp_offset o) j;
@@ -399,37 +448,54 @@ let g = A.G.empty
 let p = A.P.empty
 let p = A.P.add_neq 1 2 p
 
-let g = A.G.add_inductive 1 {target=2; source_parameters=[0]; target_parameters=[3]; length=0} g
+let g = A.G.add_inductive 1 
+  { Inductive.target=2; 
+    Inductive.source_parameters=[0]; 
+    Inductive.target_parameters=[3]; 
+    Inductive.length=Inductive.Unknown} g
 let g = A.G.add_edge 2 (RecordField ("prev", Zero)) 3 g
 
-let t: A.t = A.mk g p
-
-let t1, t2 = A.case_inductive_backward 1 t
-
-let t2 = A.unfold 5 t1
-let t3 = A.reduce_equalities t2
+let t: A.t = A.mk g p 
 
 let _ = 
-  Printf.printf "%s" (A.pp t);
-  Printf.printf "%s" (A.pp t1);
-  Printf.printf "%s" (A.pp t2);
-  Printf.printf "%s" (A.pp t3); 
-*)
+  Printf.printf "%s" (A.pp t)
+
+let t, _ = A.case_inductive_backward 1 t
+
+let _ = 
+  Printf.printf "%s" (A.pp t)
+
+let i, t = A.search 3 (RecordField ("next", Zero)) t
+
+
+let _, ot = A.reduce_equalities_one_step t []
+let t = get ot
+let _, ot = A.reduce_equalities_one_step t []
+let t = get ot
+
+
+let _ = 
+  Printf.printf "Found:%i in\n%s" i (A.pp t)
+  
+  *)
 
 (*
-module A = MAKE_SL_DOMAIN(TList)
+module A = MAKE_SL_DOMAIN(DLList)
 
 let _, t = A.malloc [Zero] A.empty
 let i, t = A.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
 let t1 = get (A.try_fold i t)
 let t1 = A.unfold i t1
-let t2 = get (A.reduce_equalities_one_step t1)
-let t3 = get (A.reduce_equalities_one_step t2)
+let _, ot2 = A.reduce_equalities_one_step t1 []
+let t2 = get ot2
+let _, ot3 = A.reduce_equalities_one_step t2 []
+let t3 = get ot3
 
 let _ = 
   Printf.printf "%s" (A.pp t);
   Printf.printf "%s" (A.pp t1);
   Printf.printf "%s" (A.pp t2);
   Printf.printf "%s" (A.pp t3)
+
 
 *)

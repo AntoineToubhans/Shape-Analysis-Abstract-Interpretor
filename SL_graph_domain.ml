@@ -178,6 +178,9 @@ module SL_GRAPH_DOMAIN =
     let get_node: (int -> bool) -> t -> int list = fun p t ->
       str_get_node (fun i n -> p i) t
 
+    let fold: (int -> 'a -> 'a) -> t -> 'a -> 'a = fun f t a ->
+      IntMap.fold (fun i _ a -> f i a) t.nodes a
+
     let find: int -> offset -> t -> (offset * int) list = fun i o t ->
       if debug then print_debug "SL_GRAPH_DOMAIN: finding edges from Node(%i)%s...\n" i (pp_offset o);
       try 
