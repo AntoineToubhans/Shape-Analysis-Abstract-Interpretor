@@ -35,7 +35,8 @@ module Inductive =
     let pp: t -> string = fun ind ->
       Printf.sprintf "ind(%s) *=%s= %i.ind(%s)" 
 	(pp_list ind.source_parameters) 
-	(match ind.length with | Unknown -> "" | Length i -> Printf.sprintf "%i" i) 
+	(match ind.length with 
+	   | Unknown -> "" | Length i -> Printf.sprintf "%i" i) 
 	ind.target (pp_list ind.target_parameters)
 	
     let get_domain: t -> int list = fun ind ->
