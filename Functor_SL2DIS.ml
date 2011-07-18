@@ -162,7 +162,7 @@ module MAKE_DIS_DOMAIN =
 
        let widening = union
 
-       let malloc: offset list -> t -> t* int = fun l_o t -> 
+       let var_alloc: offset list -> t -> t* int = fun l_o t -> 
 	 match t with
 	   | D_Top -> D_Top, 0
 	   | Disjunction l_t ->

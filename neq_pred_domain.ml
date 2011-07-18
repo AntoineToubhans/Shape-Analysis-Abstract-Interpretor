@@ -65,6 +65,20 @@ module NEQ_DOMAIN =
 	  eq = List.map change_index_cpl t.eq;
 	  lives = t.lives;} 
 
+    let get_lives: t -> int list = fun t -> 
+      if debug then print_debug "NEQ_DOMAIN: get_lives\n";
+      t.lives
+
+    (* checks only inequalities                    *)
+    (* we assume that, at disjunction layer level, *)
+    (* we have no longer equalities in t           *)
+    let equals: int IntMap.t -> int IntMap.t -> t -> t -> bool = fun m1 m2 t1 t2 ->
+      if debug then print_debug "NEQ_DOMAIN: checking [equals]\n";
+      List.for_all 
+	(fun (i, j) -> are_not_equal (IntMap.find i m1) (IntMap.find j m1) t2) t1.neq
+      && List.for_all 
+	(fun (i, j) -> are_not_equal (IntMap.find i m2) (IntMap.find j m2) t1) t2.neq     
+
     let pp: t -> string = fun t ->
       let s = List.fold_left 
 	(fun s (i, j) -> Printf.sprintf "%s%i <> %i\n" s i j) "     ---Print NEQ_PRED_DOMAIN---\n" t.neq in

@@ -14,6 +14,12 @@ module Inductive =
     let add_length x y = match x, y with
       | Length i, Length j -> Length (i+j)
       | _, _ -> Unknown
+
+    let equals_length: inductive_length -> inductive_length -> bool = fun l1 l2 ->
+      match l1, l2 with
+	| Unknown, Unknown -> true
+	| Length i, Length j -> i==j
+	| _ -> false
 	  
     type t = 
 	{ target: int;
@@ -25,7 +31,7 @@ module Inductive =
       match ind.length with
 	| Unknown -> false
 	| Length i -> (i > 0)
-      
+
     let change_index: (int -> int) -> t -> t = fun f ind ->
       { target = f ind.target;
 	source_parameters = List.map f ind.source_parameters;
@@ -105,6 +111,9 @@ module type SL_GRAPH_DOMAIN =
     val is_reached: int -> (int -> bool) -> t -> bool
 
     val domain: t -> IntSet.t
+
+    val equals: int IntMap.t -> int IntMap.t -> t -> t -> (int IntMap.t * int IntMap.t) option 
+
     val pp: t -> string
   end
 
@@ -132,6 +141,10 @@ module type PRED_DOMAIN =
     val forget: int -> t -> t
 
     val fusion: int -> int -> t -> t
+
+    val get_lives: t -> int list
+
+    val equals: int IntMap.t -> int IntMap.t -> t -> t -> bool
 
     val pp: t -> string
   end
@@ -196,6 +209,7 @@ sig
     val try_modus_ponens: int -> (int -> bool) -> t -> t option
     val canonicalize: t -> t  
 
+    val equals: t -> t -> bool
     val is_include: t -> t -> bool
 
     val pp: t -> string
@@ -215,7 +229,7 @@ module type DIS_DOMAIN =
     val union: t -> t -> t
     val widening: t -> t -> t
 
-    val malloc: offset list -> t -> t* int
+    val var_alloc: offset list -> t -> t* int
     
     (* mut [o1, ..on] &x &y assign *)
     val mutation: offset list -> offset list -> int -> int -> sc_assignment -> t -> t 

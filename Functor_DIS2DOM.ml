@@ -124,7 +124,7 @@ module MAKE_DOMAIN =
 	 if IntMap.mem x.var_uniqueId t.env || StringMap.mem x.var_name t.var_decls then
 	   error (Printf.sprintf "declaration of var %s : already exists..." (sc_var2str x));
 	 let fields = get_fields x.var_type t in
-	 let heap, i = D.malloc fields t.heap in
+	 let heap, i = D.var_alloc fields t.heap in
 	   { env = IntMap.add x.var_uniqueId i t.env;
 	     heap = heap;
 	     var_decls = StringMap.add x.var_name x t.var_decls;

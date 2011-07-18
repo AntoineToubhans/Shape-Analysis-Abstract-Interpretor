@@ -25,6 +25,8 @@ let map_default: ('a -> 'b) -> 'b -> 'a option -> 'b = fun f b ->
 exception Top
 exception Bottom
 
+exception Nope
+
 let rec map3: ('a -> 'b -> 'c -> 'd) -> 'a list -> 'b list -> 'c list -> 'd list = fun f aa bb cc -> 
     match aa, bb, cc with
     | [], [], [] -> []

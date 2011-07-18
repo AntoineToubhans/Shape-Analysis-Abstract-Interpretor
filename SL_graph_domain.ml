@@ -266,6 +266,74 @@ module SL_GRAPH_DOMAIN =
       in
 	IntMap.fold fffold t.nodes IntSet.empty
 	  
+    let equals: int IntMap.t -> int IntMap.t -> t -> t -> (int IntMap.t * int IntMap.t) option =
+      fun m1 m2 t1 t2 -> 
+	if debug then print_debug "SL_GRAPH_DOMAIN: checking [equals]\n";
+	let acc = ref (IntMap.bindings m1) 
+	and m1 = ref m1 and m2 = ref m2 in
+	let add i j = 
+	  try 
+	    if IntMap.find i !m1 != j then raise Nope
+	  with
+	    | Not_found -> 
+		m1:= IntMap.add i j !m1; 
+		m2:= IntMap.add j i !m2;
+		acc:= (i, j)::!acc in
+	let do_node n1 n2 = 
+	  OffsetMap.iter 
+	    (fun o i -> 
+	       try add i (OffsetMap.find o n2.edges)
+	       with | Not_found -> raise Nope)
+	    n1.edges;
+	  OffsetMap.iter 
+	    (fun o j -> 
+	       try add (OffsetMap.find o n1.edges) j
+	       with | Not_found -> raise Nope)
+	    n2.edges;
+	  match n1.inductive, n2.inductive with
+	    | None, None -> ()
+	    | Some ind1, Some ind2 -> 
+		if not 
+		  (Inductive.equals_length 
+		     ind1.Inductive.length ind2.Inductive.length) then 
+		    raise Nope;
+		add ind1.Inductive.target ind2.Inductive.target;
+		List.iter2 
+		  add ind1.Inductive.source_parameters ind2.Inductive.source_parameters;
+		List.iter2 
+		  add ind1.Inductive.target_parameters ind2.Inductive.target_parameters
+	    | _ -> 
+		raise Nope in
+	  try
+	    while !acc != [] do
+	      let i, j = List.hd !acc in
+	      let ni = 
+		try Some(IntMap.find i t1.nodes)
+		with | Not_found -> None 
+	      and nj = 
+		try Some (IntMap.find j t2.nodes)
+		with | Not_found -> None in
+		acc:= List.tl !acc;
+		match ni, nj with
+		  | None, None -> ()
+		  | None, Some n | Some n, None ->
+		      if n.inductive != None || not (OffsetMap.is_empty n.edges) then raise Nope
+		  | Some ni, Some nj -> 
+		      do_node ni nj
+	    done;
+	    if debug then 
+	      begin
+		print_debug "SL_GRAPH_DOMAIN: [equals] mapping found:\n";
+		IntMap.iter 
+		  (fun i j -> print_debug "SL_GRAPH_DOMAIN: [equals] t1.Node(%i) = t2.Node(%i)\n" i j)
+		  !m1
+	      end;
+	    Some(!m1, !m2) 
+	  with 
+	    | Nope -> 
+		if debug then print_debug "SL_GRAPH_DOMAIN: [equals] no mapping found\n";
+		None
+
      let pp_node: int -> node -> string = fun i n ->
        let s = Printf.sprintf "Node(%i):\n========\n" i in
        let f = fun o j s -> Printf.sprintf "%s %i%s|---> %i\n" s i (pp_offset o) j in

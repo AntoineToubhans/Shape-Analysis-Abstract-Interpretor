@@ -430,10 +430,19 @@ module MAKE_SL_DOMAIN =
 	   done;
 	   !rt
 
-       let is_include: t -> t -> bool = fun (g1, p1) (g2, p2) -> 
-	 if debug then print_debug "SL_DOMAIN: is_include\n";
-	 false
+       let equals: t -> t -> bool = fun (g1, p1) (g2, p2) -> 
+	 if debug then print_debug "SL_DOMAIN: checking [equals]\n";
+	 let matching_nodes: int IntMap.t = 
+	   List.fold_left 
+	     (fun m i -> IntMap.add i i m)
+	     IntMap.empty (P.get_lives p1) in
+	   match G.equals matching_nodes matching_nodes g1 g2 with
+	     | None -> false
+	     | Some (m1, m2) -> P.equals m1 m2 p1 p2
 
+       let is_include: t -> t -> bool = fun (g1, p1) (g2, p2) ->  
+	 if debug then print_debug "SL_DOMAIN: is_include?\n";
+	 false
 
        let pp: t -> string = fun (g, p) -> 
 	 Printf.sprintf 
@@ -446,25 +455,43 @@ module MAKE_SL_DOMAIN =
 
      end: SL_DOMAIN)
 
-(*
+
 module A = MAKE_SL_DOMAIN(DLList)
 
 let g = A.G.empty
 let p = A.P.empty
-let p = A.P.add_neq 1 2 p
+let p = A.P.add_live 1 p
 
-let g = A.G.add_inductive 1 
-  { Inductive.target=2; 
+let p1 = A.P.add_neq 2 3 p
+let g1 = A.G.add_edge 1 Zero 2 g
+let g1 = A.G.add_inductive 2 
+  { Inductive.target=3; 
     Inductive.source_parameters=[0]; 
-    Inductive.target_parameters=[3]; 
-    Inductive.length=Inductive.Unknown} g
-let g = A.G.add_edge 2 (RecordField ("prev", Zero)) 3 g
+    Inductive.target_parameters=[4]; 
+    Inductive.length=Inductive.Unknown} g1
+let g1 = A.G.add_edge 3 (RecordField ("prev", Zero)) 4 g1
+let g1 = A.G.add_edge 4 (RecordField ("method", Zero)) 7 g1
+let t1 = A.mk g1 p1 
 
-let t: A.t = A.mk g p 
+let p2 = A.P.add_neq 3 4 p
+let g2 = A.G.add_edge 1 Zero 3 g
+let g2 = A.G.add_inductive 3 
+  { Inductive.target=4; 
+    Inductive.source_parameters=[0]; 
+    Inductive.target_parameters=[2]; 
+    Inductive.length=Inductive.Unknown} g2
+let g2 = A.G.add_edge 4 (RecordField ("prev", Zero)) 2 g2
+let g2 = A.G.add_edge 2 (RecordField ("method", Zero)) 6 g2
+let t2 = A.mk g2 p2 
 
 let _ = 
-  Printf.printf "%s" (A.pp t)
+  Printf.printf "%s" (A.pp t1);
+  Printf.printf "%s" (A.pp t2)
 
+let _ = 
+  if A.equals t1 t2 then Printf.printf "equals!\n"
+
+(*
 let t, _ = A.case_inductive_backward 1 t
 
 let _ = 
@@ -481,8 +508,8 @@ let t = get ot
 
 let _ = 
   Printf.printf "Found:%i in\n%s" i (A.pp t)
+*)
   
-  *)
 
 (*
 module A = MAKE_SL_DOMAIN(DLList)
