@@ -16,8 +16,8 @@
   open Inductive_def
   open SL_domain
   open Simple_C_syntax
-  open SL_Functor_domain
-  open Functor_domain
+  open Functor_SL2DIS
+  open Functor_DIS2DOM
 
   let count = ref 0
   let genId () = count:= 1 + !count; !count
