@@ -196,6 +196,8 @@ sig
     val try_modus_ponens: int -> (int -> bool) -> t -> t option
     val canonicalize: t -> t  
 
+    val is_include: t -> t -> bool
+
     val pp: t -> string
 
     (* test*)

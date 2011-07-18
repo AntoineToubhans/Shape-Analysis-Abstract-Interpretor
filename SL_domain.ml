@@ -430,6 +430,11 @@ module MAKE_SL_DOMAIN =
 	   done;
 	   !rt
 
+       let is_include: t -> t -> bool = fun (g1, p1) (g2, p2) -> 
+	 if debug then print_debug "SL_DOMAIN: is_include\n";
+	 false
+
+
        let pp: t -> string = fun (g, p) -> 
 	 Printf.sprintf 
 	   "***-------Print SL_DOMAIN --------***\n*** with inductive: %s ***\n%s%s" 
@@ -438,7 +443,7 @@ module MAKE_SL_DOMAIN =
        let mk x y = 
 	 if debug then print_debug "SL_DOMAIN: MAKE ********test purposes only!\n";
 	 x, y
-	   
+
      end: SL_DOMAIN)
 
 (*

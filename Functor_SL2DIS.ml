@@ -142,8 +142,25 @@ module MAKE_DIS_DOMAIN =
 	     (List.fold_left (fun s i-> Printf.sprintf "%s%i " s i) "" l_i);
 	   t, l_i, l_inv
 
-       let union = disjunction
-       let widening = disjunction
+       let union: t -> t -> t = fun t1 t2 ->
+	 if debug then print_debug "DIS_DOMAIN: compute union....\n";
+	 match t1, t2 with
+	   | D_Top, _ | _, D_Top -> D_Top
+	   | Disjunction l_t1, Disjunction l_t2 -> 
+	       let rec insert acc l_t t = 
+		 match l_t with
+		   | [] -> t::acc
+		   | t1::l_t -> 
+		       if S.is_include t t1 then
+			 t1::(List.append l_t acc)
+		       else if S.is_include t1 t then
+			 insert acc l_t t
+		       else
+			 insert (t1::acc) l_t t in
+		 Disjunction
+		   (List.fold_left (insert []) l_t1 l_t2)
+
+       let widening = union
 
        let malloc: offset list -> t -> t* int = fun l_o t -> 
 	 match t with
