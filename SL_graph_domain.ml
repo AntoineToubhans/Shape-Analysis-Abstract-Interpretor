@@ -321,8 +321,10 @@ module SL_GRAPH_DOMAIN =
 		  | Some ni, Some nj -> 
 		      do_node ni nj
 	    done;
+	    (* now we deal with untracked nodes *)
+	    (* TODO *)
 	    if debug then 
-	      begin
+	      begin 
 		print_debug "SL_GRAPH_DOMAIN: [equals] mapping found:\n";
 		IntMap.iter 
 		  (fun i j -> print_debug "SL_GRAPH_DOMAIN: [equals] t1.Node(%i) = t2.Node(%i)\n" i j)
