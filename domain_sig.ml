@@ -98,7 +98,7 @@ module type SL_GRAPH_DOMAIN =
     (* check a predicate over all the nodes *)
     val for_all: (int -> bool) -> t -> bool
     val exists: (int -> bool) -> t -> bool 
-    val get_node: (int -> bool) -> t -> int list
+    val get_nodes: (int -> bool) -> t -> IntSet.t
 
     val fold: (int -> 'a -> 'a) -> t -> 'a -> 'a 
 

@@ -455,7 +455,7 @@ module MAKE_SL_DOMAIN =
 
      end: SL_DOMAIN)
 
-
+(*
 module A = MAKE_SL_DOMAIN(DLList)
 
 let g = A.G.empty
@@ -471,6 +471,7 @@ let g1 = A.G.add_inductive 2
     Inductive.length=Inductive.Unknown} g1
 let g1 = A.G.add_edge 3 (RecordField ("prev", Zero)) 4 g1
 let g1 = A.G.add_edge 4 (RecordField ("method", Zero)) 7 g1
+let g1 = A.G.add_edge 9 (RecordField ("junk", Zero)) 10 g1
 let t1 = A.mk g1 p1 
 
 let p2 = A.P.add_neq 3 4 p
@@ -482,6 +483,7 @@ let g2 = A.G.add_inductive 3
     Inductive.length=Inductive.Unknown} g2
 let g2 = A.G.add_edge 4 (RecordField ("prev", Zero)) 2 g2
 let g2 = A.G.add_edge 2 (RecordField ("method", Zero)) 6 g2
+let g2 = A.G.add_edge 11 (RecordField ("junk", Zero)) 8 g2
 let t2 = A.mk g2 p2 
 
 let _ = 
@@ -490,7 +492,7 @@ let _ =
 
 let _ = 
   if A.equals t1 t2 then Printf.printf "equals!\n"
-
+    *)
 (*
 let t, _ = A.case_inductive_backward 1 t
 

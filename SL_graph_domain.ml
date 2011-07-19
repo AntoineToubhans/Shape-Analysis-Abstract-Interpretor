@@ -34,6 +34,49 @@ module SL_GRAPH_DOMAIN =
        with
 	 | Not_found -> true
 
+     (* graph tools                                     *)
+     (* =============================================== *)
+
+     let compute_connex: t -> node IntMap.t list = fun t ->
+       if debug then print_debug "SL_GRAPH_DOMAIN: compute connex comps\n";
+       let get_n i (nodes, queue) = 
+	 try
+	   let n = IntMap.find i nodes in
+	     if n.inductive = None && OffsetMap.is_empty n.edges then
+	       (IntMap.remove i nodes), queue
+	     else
+	       (IntMap.remove i nodes), ((i, n)::queue)
+	 with
+	   | Not_found ->
+	       nodes, queue in 
+       let rec compute_one nodes comp queue = 
+	 match queue with
+	   | [] -> nodes, comp
+	   | (i, n)::queue ->
+	       let nodes, queue = 
+		 OffsetMap.fold 
+		   (fun _ -> get_n) n.edges (nodes, queue) in
+	       let nodes, queue = 
+		 if has (n.inductive) then
+		   let ind = get (n.inductive) in
+		     List.fold_left
+		       (fun cp i -> get_n i cp) (nodes, queue) 
+		       (Inductive.get_domain ind)
+		 else
+		   nodes, queue in
+		 compute_one nodes (IntMap.add i n comp) queue in
+       let rec compute_all nodes lcomp = 
+	 if IntMap.is_empty nodes then
+	   lcomp
+	 else
+	   let i, n = IntMap.choose nodes in
+	   let nodes = IntMap.remove i nodes in
+	   let nodes, comp = compute_one nodes (IntMap.empty) [i, n] in
+	     compute_all nodes (comp::lcomp) in
+	 compute_all t.nodes []
+
+     (* =============================================== *)
+
      let add_edge: int -> offset -> int -> t -> t = fun i o j t ->   
        if debug then print_debug "SL_GRAPH_DOMAIN:add_edge %i %s %i t\n" i (pp_offset o) j;
        try
@@ -170,13 +213,13 @@ module SL_GRAPH_DOMAIN =
     let exists: (int -> bool) -> t -> bool = fun p t ->
       IntMap.exists (fun i n -> p i) t.nodes
 
-    let str_get_node: (int -> node -> bool) -> t -> int list = fun p t ->
+    let str_get_nodes: (int -> node -> bool) -> t -> IntSet.t = fun p t ->
       if debug then print_debug "SL_TL_GRAPH_DOMAIN: str_get pred t\n";
       IntMap.fold
-	(fun i n l -> if p i n then i::l else l) t.nodes []
+	(fun i n set -> if p i n then IntSet.add i set else set) t.nodes IntSet.empty
 
-    let get_node: (int -> bool) -> t -> int list = fun p t ->
-      str_get_node (fun i n -> p i) t
+    let get_nodes: (int -> bool) -> t -> IntSet.t = fun p t ->
+      str_get_nodes (fun i n -> p i) t
 
     let fold: (int -> 'a -> 'a) -> t -> 'a -> 'a = fun f t a ->
       IntMap.fold (fun i _ a -> f i a) t.nodes a
@@ -304,25 +347,30 @@ module SL_GRAPH_DOMAIN =
 		  add ind1.Inductive.target_parameters ind2.Inductive.target_parameters
 	    | _ -> 
 		raise Nope in
+	let do_it i j = 
+	  let ni = 
+	    try Some(IntMap.find i t1.nodes)
+	    with | Not_found -> None 
+	  and nj = 
+	    try Some (IntMap.find j t2.nodes)
+	    with | Not_found -> None in
+	    match ni, nj with
+	      | None, None -> ()
+	      | None, Some n | Some n, None ->
+		  if n.inductive != None || not (OffsetMap.is_empty n.edges) then raise Nope
+	      | Some ni, Some nj -> 
+		  do_node ni nj in
 	  try
 	    while !acc != [] do
 	      let i, j = List.hd !acc in
-	      let ni = 
-		try Some(IntMap.find i t1.nodes)
-		with | Not_found -> None 
-	      and nj = 
-		try Some (IntMap.find j t2.nodes)
-		with | Not_found -> None in
 		acc:= List.tl !acc;
-		match ni, nj with
-		  | None, None -> ()
-		  | None, Some n | Some n, None ->
-		      if n.inductive != None || not (OffsetMap.is_empty n.edges) then raise Nope
-		  | Some ni, Some nj -> 
-		      do_node ni nj
+		do_it i j;
 	    done;
 	    (* now we deal with untracked nodes *)
-	    (* TODO *)
+	    if debug then 
+	      print_debug 
+		"SL_GRAPH_DOMAIN: [equals] partial mapping found... resolving untracked nodes\n";
+	    (* we get potential entry points of the graph *)
 	    if debug then 
 	      begin 
 		print_debug "SL_GRAPH_DOMAIN: [equals] mapping found:\n";
@@ -347,4 +395,28 @@ module SL_GRAPH_DOMAIN =
        let s = Printf.sprintf "     ---Print SL_GRAPH_DOMAIN---\nNext free node:%i\n" t.next in
 	 IntMap.fold (fun i n s -> Printf.sprintf "%s%s" s (pp_node i n)) t.nodes s
 
+
+     let g = empty
+       
+     let g = add_edge 1 Zero 2 g
+     let g = add_edge 2 Zero 3 g
+     let g = add_edge 3 Zero 1 g
+
+     let g = add_edge 4 Zero 4 g
+       
+     let l_g = compute_connex g
+       
+     let _ = 
+       Printf.printf "%s\n" (pp g);
+       let i = ref 0 in
+	 List.iter
+	   (fun g -> 
+	      i:= !i + 1; 
+	      Printf.printf "%i nth comp:\n%s\n" !i (pp {nodes = g; next=0;})) 
+	   l_g;
+
+
+
    end: SL_GRAPH_DOMAIN)
+
+
