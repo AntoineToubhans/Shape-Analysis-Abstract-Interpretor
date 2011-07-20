@@ -74,10 +74,18 @@ module NEQ_DOMAIN =
     (* we have no longer equalities in t           *)
     let equals: int IntMap.t -> int IntMap.t -> t -> t -> bool = fun m1 m2 t1 t2 ->
       if debug then print_debug "NEQ_DOMAIN: checking [equals]\n";
-      List.for_all 
-	(fun (i, j) -> are_not_equal (IntMap.find i m1) (IntMap.find j m1) t2) t1.neq
-      && List.for_all 
-	(fun (i, j) -> are_not_equal (IntMap.find i m2) (IntMap.find j m2) t1) t2.neq     
+      let b = 
+	try
+	  List.for_all 
+	    (fun (i, j) -> are_not_equal (IntMap.find i m1) (IntMap.find j m1) t2) t1.neq
+	  && List.for_all 
+	    (fun (i, j) -> are_not_equal (IntMap.find i m2) (IntMap.find j m2) t1) t2.neq     
+	with
+	  | Not_found -> 
+	      false in
+	if debug && b then print_debug "NEQ_DOMAIN: [equals] ... Yes\n";
+	if debug && not b then print_debug "NEQ_DOMAIN: [equals] ... No\n";
+	b
 
     let pp: t -> string = fun t ->
       let s = List.fold_left 

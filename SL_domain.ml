@@ -458,33 +458,59 @@ module MAKE_SL_DOMAIN =
 (*
 module A = MAKE_SL_DOMAIN(DLList)
 
-let g = A.G.empty
 let p = A.P.empty
 let p = A.P.add_live 1 p
+let p = A.P.add_live 7 p
+let p = A.P.add_neq 5 0 p
 
-let p1 = A.P.add_neq 2 3 p
-let g1 = A.G.add_edge 1 Zero 2 g
-let g1 = A.G.add_inductive 2 
+let g = A.G.empty
+let g = A.G.add_edge 1 Zero 2 g
+let g = A.G.add_inductive 2 
   { Inductive.target=3; 
     Inductive.source_parameters=[0]; 
     Inductive.target_parameters=[4]; 
-    Inductive.length=Inductive.Unknown} g1
-let g1 = A.G.add_edge 3 (RecordField ("prev", Zero)) 4 g1
-let g1 = A.G.add_edge 4 (RecordField ("method", Zero)) 7 g1
-let g1 = A.G.add_edge 9 (RecordField ("junk", Zero)) 10 g1
-let t1 = A.mk g1 p1 
+    Inductive.length=Inductive.Unknown} g
+let g = A.G.add_edge 3 (RecordField ("next", Zero)) 5 g
+let g = A.G.add_edge 3 (RecordField ("prev", Zero)) 4 g
+let g = A.G.add_edge 3 (RecordField ("top", Zero)) 6 g
+let g = A.G.add_inductive 5 
+  { Inductive.target=0; 
+    Inductive.source_parameters=[3]; 
+    Inductive.target_parameters=[0]; 
+    Inductive.length=Inductive.Unknown} g
+let g = A.G.add_edge 7 Zero 3 g
+let g = A.G.add_edge 12 (RecordField ("method", Zero)) 11 g
+let g = A.G.add_edge 8 (RecordField ("method", Zero)) 11 g
+let g = A.G.add_edge 11 (RecordField ("method", Zero)) 32 g
 
-let p2 = A.P.add_neq 3 4 p
-let g2 = A.G.add_edge 1 Zero 3 g
-let g2 = A.G.add_inductive 3 
-  { Inductive.target=4; 
+let t1 = A.mk g p 
+
+let p = A.P.empty
+let p = A.P.add_live 1 p
+let p = A.P.add_live 7 p
+let p = A.P.add_neq 0 9 p
+
+let g = A.G.empty
+let g = A.G.add_edge 1 Zero 4 g
+let g = A.G.add_inductive 4 
+  { Inductive.target=5; 
     Inductive.source_parameters=[0]; 
-    Inductive.target_parameters=[2]; 
-    Inductive.length=Inductive.Unknown} g2
-let g2 = A.G.add_edge 4 (RecordField ("prev", Zero)) 2 g2
-let g2 = A.G.add_edge 2 (RecordField ("method", Zero)) 6 g2
-let g2 = A.G.add_edge 11 (RecordField ("junk", Zero)) 8 g2
-let t2 = A.mk g2 p2 
+    Inductive.target_parameters=[6]; 
+    Inductive.length=Inductive.Unknown} g
+let g = A.G.add_edge 5 (RecordField ("next", Zero)) 9 g
+let g = A.G.add_edge 5 (RecordField ("prev", Zero)) 6 g
+let g = A.G.add_edge 5 (RecordField ("top", Zero)) 8 g
+let g = A.G.add_inductive 9 
+  { Inductive.target=0; 
+    Inductive.source_parameters=[5]; 
+    Inductive.target_parameters=[0]; 
+    Inductive.length=Inductive.Unknown} g
+let g = A.G.add_edge 7 Zero 5 g
+let g = A.G.add_edge 3 (RecordField ("method", Zero)) 2 g
+let g = A.G.add_edge 17 (RecordField ("method", Zero)) 2 g
+let g = A.G.add_edge 2 (RecordField ("method", Zero)) 21 g
+
+let t2 = A.mk g p 
 
 let _ = 
   Printf.printf "%s" (A.pp t1);
@@ -492,7 +518,7 @@ let _ =
 
 let _ = 
   if A.equals t1 t2 then Printf.printf "equals!\n"
-    *)
+*)
 (*
 let t, _ = A.case_inductive_backward 1 t
 

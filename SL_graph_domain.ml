@@ -34,9 +34,23 @@ module SL_GRAPH_DOMAIN =
        with
 	 | Not_found -> true
 
+     (* =============================================== *)
      (* graph tools                                     *)
      (* =============================================== *)
 
+     let fold_from_node: (int -> 'a -> 'a) -> node -> 'a -> 'a = fun f n a ->
+       let a = OffsetMap.fold (fun _ -> f) n.edges a in
+	 match n.inductive with
+	   | None -> a
+	   | Some ind ->
+	       let a = f ind.Inductive.target a in
+	       let a = 
+		 List.fold_left 
+		   (fun a i -> f i a) a ind.Inductive.source_parameters in
+		 List.fold_left 
+		   (fun a i -> f i a) a ind.Inductive.target_parameters 
+
+     (* bad function: TO BE FIXED *)
      let compute_connex: t -> node IntMap.t list = fun t ->
        if debug then print_debug "SL_GRAPH_DOMAIN: compute connex comps\n";
        let get_n i (nodes, queue) = 
@@ -75,6 +89,20 @@ module SL_GRAPH_DOMAIN =
 	     compute_all nodes (comp::lcomp) in
 	 compute_all t.nodes []
 
+     (* get entry points                   *)
+     (* very naive, can't deal with cycles *)
+     let get_entry_points: t -> IntSet.t = fun t ->
+       let rec r_gep nodes ep rp = 
+	 if IntMap.is_empty nodes then ep else
+	   let i, n = IntMap.choose nodes in
+	   let ep = if IntSet.mem i rp then ep else IntSet.add i ep in
+	   let ep, rp = 
+	     fold_from_node
+	       (fun i (ep, rp) -> IntSet.remove i ep, IntSet.add i rp) 
+	       n (ep, rp) in
+	     r_gep (IntMap.remove i nodes) ep rp in
+	 r_gep t.nodes IntSet.empty IntSet.empty	     
+  
      (* =============================================== *)
 
      let add_edge: int -> offset -> int -> t -> t = fun i o j t ->   
@@ -316,7 +344,8 @@ module SL_GRAPH_DOMAIN =
 	and m1 = ref m1 and m2 = ref m2 in
 	let add i j = 
 	  try 
-	    if IntMap.find i !m1 != j then raise Nope
+	    if IntMap.find i !m1 != j then 
+	      raise (Nope (Printf.sprintf "multiple matching for node %i" i))
 	  with
 	    | Not_found -> 
 		m1:= IntMap.add i j !m1; 
@@ -326,12 +355,14 @@ module SL_GRAPH_DOMAIN =
 	  OffsetMap.iter 
 	    (fun o i -> 
 	       try add i (OffsetMap.find o n2.edges)
-	       with | Not_found -> raise Nope)
+	       with | Not_found -> 
+		 raise (Nope (Printf.sprintf "%s-->%i don't match" (pp_offset o) i)))
 	    n1.edges;
-	  OffsetMap.iter 
+	  OffsetMap.iter  
 	    (fun o j -> 
 	       try add (OffsetMap.find o n1.edges) j
-	       with | Not_found -> raise Nope)
+	       with | Not_found -> 
+		 raise (Nope (Printf.sprintf "%s-->%i don't match" (pp_offset o) j)))
 	    n2.edges;
 	  match n1.inductive, n2.inductive with
 	    | None, None -> ()
@@ -339,16 +370,16 @@ module SL_GRAPH_DOMAIN =
 		if not 
 		  (Inductive.equals_length 
 		     ind1.Inductive.length ind2.Inductive.length) then 
-		    raise Nope;
+		    raise (Nope "inductive length doesn't match");
 		add ind1.Inductive.target ind2.Inductive.target;
 		List.iter2 
 		  add ind1.Inductive.source_parameters ind2.Inductive.source_parameters;
 		List.iter2 
 		  add ind1.Inductive.target_parameters ind2.Inductive.target_parameters
 	    | _ -> 
-		raise Nope in
+		raise (Nope "inductive doesn't match") in
 	let do_it i j = 
-	  let ni = 
+	  let ni =  
 	    try Some(IntMap.find i t1.nodes)
 	    with | Not_found -> None 
 	  and nj = 
@@ -357,7 +388,8 @@ module SL_GRAPH_DOMAIN =
 	    match ni, nj with
 	      | None, None -> ()
 	      | None, Some n | Some n, None ->
-		  if n.inductive != None || not (OffsetMap.is_empty n.edges) then raise Nope
+		  if n.inductive != None || not (OffsetMap.is_empty n.edges) then 
+		    raise (Nope "nodes don't match")
 	      | Some ni, Some nj -> 
 		  do_node ni nj in
 	  try
@@ -371,7 +403,42 @@ module SL_GRAPH_DOMAIN =
 	      print_debug 
 		"SL_GRAPH_DOMAIN: [equals] partial mapping found... resolving untracked nodes\n";
 	    (* we get potential entry points of the graph *)
-	    if debug then 
+	    let u_ep1 = 
+	      IntSet.filter 
+		(fun i -> not (IntMap.mem i !m1)) (get_entry_points t1) 
+	    and u_ep2 = 
+	      IntSet.filter
+		(fun i -> not (IntMap.mem i !m2)) (get_entry_points t2) in
+	    if IntSet.cardinal u_ep1 != IntSet.cardinal u_ep2 then 
+	      raise (Nope "entry points of untracked nodes doesn't match");
+	      (* awfull dummy code... *)
+	    let old_m1 = ref IntMap.empty and old_m2 = ref IntMap.empty in 
+	    let ep1 = ref u_ep1 and ep2 = ref u_ep2 and ep22 = ref u_ep2 in
+	      while not (IntSet.is_empty !ep1) do
+		let i = IntSet.choose !ep1 and success = ref false in
+		  ep22 := !ep2;
+		  old_m1:= !m1;
+		  old_m2:= !m2;
+		  while not (IntSet.is_empty !ep22) && not !success do
+		    let j = IntSet.choose !ep22 in
+		      acc:= [i, j];
+		      m1:= IntMap.add i j !old_m1;
+		      m2:= IntMap.add j i !old_m2;
+		      try 
+			while !acc != [] do
+			  let i, j = List.hd !acc in
+			    acc:= List.tl !acc;
+			    do_it i j;
+			done;
+			success:= true;
+			ep1:= IntSet.remove i !ep1; 
+			ep2:= IntSet.remove j !ep2;
+		      with
+			| Nope _ ->
+			    ep22:= IntSet.remove j !ep22;
+		  done;
+	      done;
+	    if debug then  
 	      begin 
 		print_debug "SL_GRAPH_DOMAIN: [equals] mapping found:\n";
 		IntMap.iter 
@@ -380,8 +447,8 @@ module SL_GRAPH_DOMAIN =
 	      end;
 	    Some(!m1, !m2) 
 	  with 
-	    | Nope -> 
-		if debug then print_debug "SL_GRAPH_DOMAIN: [equals] no mapping found\n";
+	    | Nope e -> 
+		if debug then print_debug "SL_GRAPH_DOMAIN: [equals] no mapping found: %s\n" e;
 		None
 
      let pp_node: int -> node -> string = fun i n ->
@@ -395,16 +462,24 @@ module SL_GRAPH_DOMAIN =
        let s = Printf.sprintf "     ---Print SL_GRAPH_DOMAIN---\nNext free node:%i\n" t.next in
 	 IntMap.fold (fun i n s -> Printf.sprintf "%s%s" s (pp_node i n)) t.nodes s
 
+(* TESTS
 
-     let g = empty
+     let g = empty 
        
      let g = add_edge 1 Zero 2 g
-     let g = add_edge 2 Zero 3 g
-     let g = add_edge 3 Zero 1 g
-
-     let g = add_edge 4 Zero 4 g
+     let g = add_edge 3 Zero 2 g
+     let g = add_edge 2 Zero 4 g
+     let g = add_inductive 4 
+       { Inductive.target = 5;
+	 Inductive.source_parameters= [7];
+	 Inductive.target_parameters = [0];
+	 Inductive.length = Inductive.Unknown;} g
+     let g = add_edge 5 (RecordField("plop", Zero)) 6 g
+     let g = add_edge 7 (RecordField("junk", Zero)) 8 g
        
      let l_g = compute_connex g
+
+     let s = get_entry_points g 
        
      let _ = 
        Printf.printf "%s\n" (pp g);
@@ -414,8 +489,9 @@ module SL_GRAPH_DOMAIN =
 	      i:= !i + 1; 
 	      Printf.printf "%i nth comp:\n%s\n" !i (pp {nodes = g; next=0;})) 
 	   l_g;
-
-
+	 IntSet.iter 
+	   (fun i -> Printf.printf "%i\t" i) s
+*)
 
    end: SL_GRAPH_DOMAIN)
 
