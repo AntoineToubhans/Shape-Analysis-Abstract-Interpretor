@@ -45,6 +45,9 @@ type sc_cond =
   | Eq of sc_exp*sc_exp (* e1==e2 *)
   | Neq of sc_exp*sc_exp (* e1!=e2 *)
 
+type spec = 
+  | Add_Induct of sc_exp * sc_exp * int list * int list 
+
 type sc_command = 
     | Assignment of sc_assignment
     | StructDeclaration of sc_struct_decl
@@ -52,7 +55,6 @@ type sc_command =
     | Seq of sc_block
     | If of sc_cond * sc_block * sc_block
     | While of sc_cond * sc_block
-
 and sc_block = sc_command list
 
 (* ======== pretty printers ============ *)

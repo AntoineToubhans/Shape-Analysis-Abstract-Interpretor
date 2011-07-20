@@ -32,8 +32,8 @@ ML_FILES=	simple_C_syntax.ml \
 		neq_pred_domain.ml \
 		SL_graph_domain.ml \
 		SL_domain.ml \
-		Functor_SL2DIS.ml \
-		Functor_DIS2DOM.ml \
+		functor_SL2DIS.ml \
+		functor_DIS2DOM.ml \
 		$(AUTOGEN_ML) \
 		main.ml
 MLI_FILES=	$(AUTOGEN_MLI)

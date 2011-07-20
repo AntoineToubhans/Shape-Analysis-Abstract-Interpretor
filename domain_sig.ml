@@ -212,6 +212,9 @@ sig
     val equals: t -> t -> bool
     val is_include: t -> t -> bool
 
+    val union: t -> t -> t option
+    val widening: t -> t -> t option
+
     val pp: t -> string
 
     (* test*)
@@ -228,6 +231,7 @@ module type DIS_DOMAIN =
 
     val union: t -> t -> t
     val widening: t -> t -> t
+    val is_include: t -> t -> bool
 
     val var_alloc: offset list -> t -> t* int
     

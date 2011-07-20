@@ -440,9 +440,21 @@ module MAKE_SL_DOMAIN =
 	     | None -> false
 	     | Some (m1, m2) -> P.equals m1 m2 p1 p2
 
-       let is_include: t -> t -> bool = fun (g1, p1) (g2, p2) ->  
-	 if debug then print_debug "SL_DOMAIN: is_include?\n";
-	 false
+       (* sound and sufficient with canonicalization *)
+       let is_include: t -> t -> bool = equals
+
+       let union: t -> t -> t option = fun t1 t2 ->
+	 if debug then print_debug "SL_DOMAIN: computing [Union]\n";
+	 if is_include t1 t2 then Some t2 
+	 else if is_include t2 t1 then Some t1
+	 else None
+
+       let widening: t -> t -> t option = fun t1 t2 ->
+	 if debug then print_debug "SL_DOMAIN: computing [Widening]\n";
+	 let t1 = canonicalize t1 and t2 = canonicalize t2 in
+	   if is_include t1 t2 then Some t2 
+	   else if is_include t2 t1 then Some t1
+	   else None
 
        let pp: t -> string = fun (g, p) -> 
 	 Printf.sprintf 

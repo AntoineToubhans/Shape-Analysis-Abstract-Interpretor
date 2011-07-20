@@ -143,7 +143,7 @@ module MAKE_DIS_DOMAIN =
 	   t, l_i, l_inv
 
        let union: t -> t -> t = fun t1 t2 ->
-	 if debug then print_debug "DIS_DOMAIN: compute union....\n";
+	 if debug then print_debug "DIS_DOMAIN: computing [Union]\n";
 	 match t1, t2 with
 	   | D_Top, _ | _, D_Top -> D_Top
 	   | Disjunction l_t1, Disjunction l_t2 -> 
@@ -151,16 +151,54 @@ module MAKE_DIS_DOMAIN =
 		 match l_t with
 		   | [] -> t::acc
 		   | t1::l_t -> 
-		       if S.is_include t t1 then
+		       begin 
+			 match S.union t t1 with
+			   | Some t -> 
+			       t::(List.append l_t acc)
+			   | None -> 
+			       insert (t1::acc) l_t t 
+		       end in
+(*		       if S.is_include t t1 then
 			 t1::(List.append l_t acc)
 		       else if S.is_include t1 t then
 			 insert acc l_t t
 		       else
-			 insert (t1::acc) l_t t in
+			 insert (t1::acc) l_t t in *)
 		 Disjunction
 		   (List.fold_left (insert []) l_t1 l_t2)
 
-       let widening = union
+       let widening: t -> t -> t = fun t1 t2 ->
+	 if debug then print_debug "DIS_DOMAIN: computing [Widening]\n";
+	 match t1, t2 with
+	   | D_Top, _ | _, D_Top -> D_Top
+	   | Disjunction l_t1, Disjunction l_t2 -> 
+	       let rec insert acc l_t t = 
+		 match l_t with
+		   | [] -> t::acc
+		   | t1::l_t -> 
+		       begin 
+			 match S.widening t t1 with
+			   | Some t -> 
+			       t::(List.append l_t acc)
+			   | None -> 
+			       insert (t1::acc) l_t t 
+		       end in
+		 Disjunction
+		   (List.fold_left (insert []) l_t1 l_t2)
+
+       (* sound, but can be easely improved ... *)
+       let is_include: t -> t -> bool = fun t1 t2 ->	 
+	 if debug then print_debug "DIS_DOMAIN: checking [inclusion]\n";
+	 match t1, t2 with
+	   | _, D_Top -> 
+	       true
+	   | D_Top, _ -> false
+	   | Disjunction l_t1, Disjunction l_t2 -> 
+	       List.for_all 
+		 (fun t1 -> 
+		    List.exists 
+		      (fun t2 -> S.is_include t1 t2) l_t2) 
+		 l_t1
 
        let var_alloc: offset list -> t -> t* int = fun l_o t -> 
 	 match t with

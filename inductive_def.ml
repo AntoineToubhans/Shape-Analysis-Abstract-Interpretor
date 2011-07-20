@@ -9,6 +9,33 @@ open Domain_sig
 
 
 (* =========================================================== *)
+(* Module List                                                 *)
+(* =========================================================== *)
+(*   a.l() := { a==0 | emp }                                   *)
+(*            { a!=0 | a@next->b * b.l() }                     *)
+(* =========================================================== *)
+module SList =  
+  (struct
+     let name = "Singly-linked List"
+
+     let number_of_parameters: int = 0
+     let number_of_fresh: int = 1
+
+     let domain_offset: offset list = 
+       [RecordField("next", Zero)]
+
+     let def_points_to_fresh: offset list = 
+       [RecordField("next", Zero)]
+
+     let def_points_to_parameters: offset list = 
+       []
+
+     (* current node -> parameters -> fresh *)
+     let new_parameters: int -> int list -> int list -> int list = fun i l p -> []
+
+   end: INDUCTIVE_DEF)
+
+(* =========================================================== *)
 (* Module Top_list                                             *)
 (* =========================================================== *)
 (*   a.tl(d) := { a==0 | emp }                                 *)

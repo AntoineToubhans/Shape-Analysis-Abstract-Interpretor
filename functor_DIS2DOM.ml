@@ -151,6 +151,10 @@ module MAKE_DOMAIN =
 	 (* t1.struct_decls & t2.struct_decls shoul'd be the same *)
 	 { t1 with heap = D.widening t1.heap t2.heap}
 
+       let is_include: t -> t -> bool = fun t1 t2 -> 
+	 if debug then print_debug "DOMAIN: is include\n";
+	 D.is_include t1.heap t2.heap
+
        let rec eval_sc_command: t -> sc_command -> t = fun t c -> 
 	 if debug then print_debug "DOMAIN: [rec] eval command %s\n" (sc_command2str c);
 	 match c with
@@ -168,17 +172,23 @@ module MAKE_DOMAIN =
 	       and t2 = List.fold_left eval_sc_command t2 b2 in
 	       union t1 t2
 	   | While(cond, block) -> 
-	       (* TO DO *)
 	       let t1, t2 = filter cond t in
 	       let t_entry_loop = ref t1 
 	       and t_mem = ref {t with heap = D.bottom} 
-	       and t_out = ref t2 in
-		 while (* not t_aft_loop >= t_entry_loop *) true do
+	       and t_out = ref t2 
+	       and counter = ref 0 in
+		 while not (is_include !t_entry_loop !t_mem) do
 		   t_mem := !t_entry_loop;
+		   counter:= 1 + !counter;
 		   let t1, t2 = 
-		     filter cond 
-		       (union t 
-			  (List.fold_left eval_sc_command !t_entry_loop block)) in
+		     if !counter <3 then
+		       filter cond 
+			 (union t 
+			    (List.fold_left eval_sc_command !t_entry_loop block)) 
+		     else 
+		       filter cond 
+			 (widening t 
+			    (List.fold_left eval_sc_command !t_entry_loop block)) in
 		     t_entry_loop := t1;
 		     t_out := t2;
 		 done; !t_out
