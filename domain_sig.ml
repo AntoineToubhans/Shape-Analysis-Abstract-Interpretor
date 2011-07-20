@@ -63,6 +63,9 @@ exception Split of bool*int
      
 module type SL_GRAPH_DOMAIN =
   sig      
+
+    val debug: bool
+
     type t
       
     val empty: t
@@ -119,6 +122,9 @@ module type SL_GRAPH_DOMAIN =
 
 module type PRED_DOMAIN = 
   sig
+
+    val debug: bool
+
     type t
 
     val empty: t
@@ -174,6 +180,8 @@ sig
     module P: PRED_DOMAIN
     module D: INDUCTIVE_DEF
 
+    val debug: bool
+
     type t
     val empty: t
 
@@ -215,6 +223,8 @@ sig
     val union: t -> t -> t option
     val widening: t -> t -> t option
 
+    val spec_assume_inductive: int -> int -> int list -> int list -> t -> t
+
     val pp: t -> string
 
     (* test*)
@@ -224,7 +234,11 @@ sig
 module type DIS_DOMAIN = 
   sig
 
+    val debug: bool
+
     type t   
+
+    val init: t
 
     val top: t        
     val bottom: t
@@ -240,6 +254,8 @@ module type DIS_DOMAIN =
       
     val filter: offset list -> int -> int -> sc_cond -> t -> t * t
 
+    val spec_assume_inductive: int -> int -> sc_hvalue -> sc_exp -> int list -> int list -> t -> t
+
     val pp: t -> string
 
   end 
@@ -247,7 +263,13 @@ module type DIS_DOMAIN =
 module type DOMAIN =
   sig
 
+    val debug: bool
+
     type t
+
+    val pp: t -> unit
+
+    val init: t
 
     val eval_sc_assignment: sc_assignment -> t -> t
     val eval_sc_struct_decl: sc_struct_decl -> t -> t
@@ -260,4 +282,11 @@ module type DOMAIN =
 
     val eval_sc_command: t -> sc_command -> t 
 
+  end
+
+module type OPTION = 
+  sig
+  
+    val debug: bool
+       
   end

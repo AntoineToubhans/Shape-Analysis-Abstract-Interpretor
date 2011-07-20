@@ -17,14 +17,32 @@ open Functor_SL2DIS
 let error(s: string) = failwith (Printf.sprintf "DOMAIN_ERROR: %s" s)
 
 module MAKE_DOMAIN =
-  functor (D: DIS_DOMAIN) -> 
+  functor (D: DIS_DOMAIN) -> functor (O: OPTION) ->
     (struct
+
+       let debug = O.debug 
 
        type t = 
 	   { env: int IntMap.t;
 	     heap: D.t;
 	     var_decls: sc_var StringMap.t;
 	     struct_decls: sc_struct_decl StringMap.t}
+
+       let pp: t -> unit = fun t ->
+	 Printf.printf "**************************************\n";
+	 Printf.printf "*****-------Print DOMAIN --------*****\n";
+	 Printf.printf "**************************************\nENV:\n";
+	 StringMap.iter
+	   (fun s v -> Printf.printf "&%s -------------> %i\n" s (IntMap.find v.var_uniqueId t.env))
+	   t.var_decls;
+	 Printf.printf "HEAP:\n%s" (D.pp t.heap); 
+	 Printf.printf "**************************************\n"
+
+       let init: t = 
+	 { env = IntMap.empty;
+	   heap = D.init;
+	   var_decls = StringMap.empty;
+	   struct_decls = StringMap.empty}
 
        let rec get_type_hv: sc_hvalue -> t -> sc_type = fun e t ->
 	 if debug then print_debug "DOMAIN: [rec] get type of sc_hvalue %s \n" (sc_hvalue2str e);
@@ -130,6 +148,14 @@ module MAKE_DOMAIN =
 	     var_decls = StringMap.add x.var_name x t.var_decls;
 	     struct_decls = t.struct_decls;}
 
+       let eval_spec: spec -> t -> t = fun s t -> 
+	 if debug then print_debug "DOMAIN: eval spec\n";
+	 match s with
+	   | Add_Induct(e1, e2, l1, l2) ->
+	       let i = get_entry_point_hv e1 t
+	       and j = get_entry_point e2 t in
+		 { t with heap = D.spec_assume_inductive i j e1 e2 l1 l2 t.heap }
+	       
        let filter: sc_cond -> t -> t * t = fun c t -> 
 	 if debug then print_debug "DOMAIN: filter %s\n" (sc_cond2str c);
 	 let ei, ej = 
@@ -157,8 +183,10 @@ module MAKE_DOMAIN =
 
        let rec eval_sc_command: t -> sc_command -> t = fun t c -> 
 	 if debug then print_debug "DOMAIN: [rec] eval command %s\n" (sc_command2str c);
+	 Printf.printf "BEFORE: %s\n" (sc_command2str c);
+	 pp t;
 	 match c with
-	   | Assignment a ->
+	   | Assignment a -> 
 	       eval_sc_assignment a t
 	   | StructDeclaration sd ->
 	       eval_sc_struct_decl sd t
@@ -192,6 +220,7 @@ module MAKE_DOMAIN =
 		     t_entry_loop := t1;
 		     t_out := t2;
 		 done; !t_out
-		 
+	   | Spec s -> 
+	       eval_spec s t
 
      end: DOMAIN)

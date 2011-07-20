@@ -6,9 +6,11 @@ open Domain_sig
 (* =========================================================== *)
 (*                                  Last modified: AT 06/18/11 *)
 
-module NEQ_DOMAIN = 
+module NEQ_DOMAIN = functor (O: OPTION) ->
   (struct
     
+    let debug = O.debug
+
     type t = 
 	{ neq    : (int*int) list;
 	  eq     : (int*int) list;

@@ -1,4 +1,6 @@
+open Utils
 (* ============ simple C ========= *)
+
 type sc_record_field = string
 type sc_array_i = int
 
@@ -46,7 +48,7 @@ type sc_cond =
   | Neq of sc_exp*sc_exp (* e1!=e2 *)
 
 type spec = 
-  | Add_Induct of sc_exp * sc_exp * int list * int list 
+  | Add_Induct of sc_hvalue * sc_exp * int list * int list 
 
 type sc_command = 
     | Assignment of sc_assignment
@@ -55,6 +57,7 @@ type sc_command =
     | Seq of sc_block
     | If of sc_cond * sc_block * sc_block
     | While of sc_cond * sc_block
+    | Spec of spec
 and sc_block = sc_command list
 
 (* ======== pretty printers ============ *)
@@ -127,6 +130,13 @@ let sc_cond2str(c: sc_cond) =
     | Eq(e, f) -> Printf.sprintf "%s==%s"  (sc_exp2str e) (sc_exp2str f)
     | Neq(e, f) -> Printf.sprintf "%s!=%s"  (sc_exp2str e) (sc_exp2str f)
 
+let spec2str(s: spec) =
+  match s with
+    | Add_Induct(e1, e2, l1, l2) ->
+	Printf.sprintf "/* _SPEC \n\tAdd_inductive(%s, %s, %s, %s)\n SPEC_ */\n"
+	  (sc_hvalue2str e1) (sc_exp2str e2)
+	  (intlist2str l1)
+	  (intlist2str l2)
 
 let rec sc_command2str (p: sc_command)=
   match p with
@@ -138,6 +148,7 @@ let rec sc_command2str (p: sc_command)=
         Printf.sprintf "if(%s){\n%s}Else{\n%s}\n" (sc_cond2str c) (sc_block2str b1) (sc_block2str b2)
     | While(c, b) ->
         Printf.sprintf "while(%s){\n%s}\n" (sc_cond2str c) (sc_block2str b)
+    | Spec s -> spec2str s
 
 and sc_block2str(b: sc_block) =
   List.fold_left (fun s p -> Printf.sprintf "%s%s" s (sc_command2str p)) "" b 

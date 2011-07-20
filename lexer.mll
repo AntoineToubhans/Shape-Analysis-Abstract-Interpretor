@@ -22,7 +22,7 @@ let letter = ['a'- 'z' 'A'-'Z']
 let ident = (letter|'_')(letter|decdigit|'_')* 
 
 rule initial = parse
-    "/*"        { let _ = comment lexbuf in initial lexbuf }
+    "/*"        { comment lexbuf }
   | "//"        { line lexbuf }
   | "#"         { line lexbuf }
   | blank       { initial lexbuf }
@@ -40,6 +40,7 @@ rule initial = parse
   | '('		{ LPAREN }
   | ')'		{ RPAREN }
   | ';'		{ SEMICOLON }
+  | ','         { COMMA }
   | '.'		{ DOT }
   | '&'         { ADDR }
   | "struct"	{ STRUCT }
@@ -51,8 +52,11 @@ rule initial = parse
   | "while"     { WHILE }
   | "malloc"    { MALLOC }
   | "NULL"      { NULL }
+  | "_assume_inductive"
+                { SPEC_ASSUME_INDUCT }
+  | "SPEC_"     { comment lexbuf }
   | eof	        { EOF }
-  | ident as s  { ID s }
+  | ident as s  { ID s } 
   | _           { raise Non_supported }
 
 
@@ -60,15 +64,12 @@ and line = parse
     "\n"        { initial lexbuf }
   | _           { line lexbuf }
 
-(* TO DO *)
 and comment = parse
-    "*/"        { () }
-  | "<*"        { let _ = graph lexbuf in comment lexbuf }
+    "*/"        { initial lexbuf }
+  | "_SPEC"     { initial lexbuf }
   | _           { comment lexbuf }
 
-and graph = parse
-    "*>"        { () }
-  | _           { graph lexbuf }
+
 
   
 

@@ -10,9 +10,11 @@ open Domain_sig
 let error s =  failwith (Printf.sprintf "SL_GRAPH_DOMAIN_ERROR: %s" s)
 
 
-module SL_GRAPH_DOMAIN = 
+module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
   (struct
      
+     let debug = O.debug
+
      type node =
 	 { edges: int OffsetMap.t;
 	   inductive : Inductive.t option;}

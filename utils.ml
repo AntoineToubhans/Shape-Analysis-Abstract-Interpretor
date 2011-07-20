@@ -1,5 +1,3 @@
-let debug = true
-
 module Int = 
   struct    
     type t = int
@@ -33,6 +31,15 @@ let rec map3: ('a -> 'b -> 'c -> 'd) -> 'a list -> 'b list -> 'c list -> 'd list
     | a::aa, b::bb, c::cc -> (f a b c)::(map3 f aa bb cc)
     | _ -> raise (Invalid_argument "Utils.map3")
 
+(* tail recursive *)
+let tail_map3: ('a -> 'b -> 'c -> 'd) -> 'a list -> 'b list -> 'c list -> 'd list = fun f aa bb cc -> 
+  let rec aux acc f aa bb cc = 
+    match aa, bb, cc with
+    | [], [], [] -> acc
+    | a::aa, b::bb, c::cc -> aux ((f a b c)::acc) f aa bb cc 
+    | _ -> raise (Invalid_argument "Utils.tail_map3") in
+    aux [] f aa bb cc
+
 let maxlist l = 
   let rec ml l acc = 
     match l with | [] -> acc | a::l -> ml l (max a acc) in ml l 0
@@ -54,6 +61,12 @@ let delete_duplicates: ('a -> 'a -> bool) -> 'a list -> 'a list = fun c l ->
 let injectionNSquare2N: (int * int) -> int = fun (x, y) ->
   x*x+y*y+2*x*y+x+3*y
 
+let intlist2str: int list -> string = fun l ->
+  match l with
+    | [] -> "[]" 
+    | x::l -> 
+	"["^(List.fold_left (fun s a -> Printf.sprintf "%s, %i" s a) (Printf.sprintf "%i" x) l)^"]"
+	  
 
 (* tests
 let l = [(0,2); (5,14); (5, 14); (0, 2)]

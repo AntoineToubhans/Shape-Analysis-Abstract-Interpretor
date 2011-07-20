@@ -15,12 +15,14 @@ open Inductive_def
 let error(s: string) = failwith (Printf.sprintf "SL_DOMAIN_ERROR: %s" s)
 
 module MAKE_SL_DOMAIN = 
-  functor (D: INDUCTIVE_DEF) ->
+  functor (D: INDUCTIVE_DEF) -> functor (O: OPTION) ->
     (struct
        
-       module P = NEQ_DOMAIN
-       module G = SL_GRAPH_DOMAIN
+       module P = NEQ_DOMAIN(O)
+       module G = SL_GRAPH_DOMAIN(O)
        module D = D
+
+       let debug = O.debug
 
        type t = G.t * P.t
 	   
@@ -455,6 +457,15 @@ module MAKE_SL_DOMAIN =
 	   if is_include t1 t2 then Some t2 
 	   else if is_include t2 t1 then Some t1
 	   else None
+
+       let spec_assume_inductive: int -> int -> int list -> int list -> t -> t = 
+	 fun i j li lj (g, p) ->
+	   let ind = 
+	     { Inductive.target = j;
+	       Inductive.source_parameters = li;
+	       Inductive.target_parameters = lj;
+	       Inductive.length = Inductive.Unknown;} in
+	     G.add_inductive i ind g, p	 
 
        let pp: t -> string = fun (g, p) -> 
 	 Printf.sprintf 

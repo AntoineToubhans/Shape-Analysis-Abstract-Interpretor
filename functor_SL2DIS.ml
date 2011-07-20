@@ -16,12 +16,16 @@ open Simple_C_syntax
 let error(s: string) = failwith (Printf.sprintf "DIS_DOMAIN_ERROR: %s" s)
 
 module MAKE_DIS_DOMAIN =
-  functor (S: SL_DOMAIN) -> 
+  functor (S: SL_DOMAIN) -> functor (O: OPTION) -> 
     (struct
-  
+
+       let debug = O.debug
+
        type t = 
 	 | Disjunction of S.t list
 	 | D_Top
+
+       let init: t = Disjunction [S.empty]
 	 
        let top: t = D_Top        
        let bottom: t = Disjunction []
@@ -419,7 +423,27 @@ module MAKE_DIS_DOMAIN =
 		 end in
 	   if b then t1, t2 else t2, t1
 
-
+       let spec_assume_inductive: int -> int -> sc_hvalue -> sc_exp -> int list -> int list -> t -> t = 
+	 fun i j e1 e2 l1 l2 t ->
+	   let t, l2 = 
+	     match e2 with
+	       | HValue e2 -> 
+		   let t, l2, o2 = get_sc_hvalue e2 j t in
+		     if o2 != Zero then
+		       error "Spec assertion Failure";
+	             t, l2
+	       | VValue e2 -> 
+     		   get_sc_vvalue e2 j [] t in
+	   let t, l1, o1, ll = get_sc_hvalue2 e1 i t (List.map (fun i -> [i]) l2) in
+	     if o1 != Zero then
+	       error "Spec assertion Failure";
+	     match t with
+	       | D_Top -> D_Top
+	       | Disjunction l_t -> 
+		   Disjunction 
+		     (tail_map3 
+			(fun i jj -> S.spec_assume_inductive i (List.hd jj) l1 l2) 
+			l1 ll l_t)
        let pp: t -> string = fun t -> 
 	 let s = 
 	   match t with
@@ -434,8 +458,7 @@ module MAKE_DIS_DOMAIN =
 	     | D_Top -> 
 		 "Top\n"
 	 in
-	   Printf.sprintf 
-	     "*****-------Print DOMAIN --------*****\n%s" s
+	   "*****-----Print DIS_DOMAIN ------*****\n"^s
 
     end: DIS_DOMAIN)
 (*

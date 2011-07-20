@@ -24,8 +24,8 @@ all: analyzer
 AUTOGEN_ML= 	parser.ml lexer.ml
 AUTOGEN_MLI=	parser.mli
 AUTOGEN=	$(AUTOGEN_ML) $(AUTOGEN_MLI)
-ML_FILES=	simple_C_syntax.ml \
-		utils.ml \
+ML_FILES=	utils.ml \
+		simple_C_syntax.ml \
 		offset.ml \
 		domain_sig.ml \
 		inductive_def.ml \
