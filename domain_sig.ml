@@ -27,6 +27,9 @@ module Inductive =
 	  target_parameters: int list;
 	  length: inductive_length;}
 	  
+    let forget_length: t -> t = fun ind ->
+      { ind with length = Unknown }
+
     let is_positive: t -> bool = fun ind -> 
       match ind.length with
 	| Unknown -> false
@@ -118,6 +121,8 @@ module type SL_GRAPH_DOMAIN =
     val equals: int IntMap.t -> int IntMap.t -> t -> t -> (int IntMap.t * int IntMap.t) option 
 
     val pp: t -> string
+
+    val clean: t -> t
   end
 
 module type PRED_DOMAIN = 
@@ -153,6 +158,8 @@ module type PRED_DOMAIN =
     val equals: int IntMap.t -> int IntMap.t -> t -> t -> bool
 
     val pp: t -> string
+
+    val clean: IntSet.t -> t -> t
   end
 
 module type INDUCTIVE_DEF = 
@@ -227,6 +234,7 @@ sig
 
     val pp: t -> string
 
+    val clean: t -> t
     (* test*)
     val mk: G.t -> P.t -> t
   end

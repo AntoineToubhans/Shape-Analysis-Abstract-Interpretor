@@ -94,5 +94,11 @@ module NEQ_DOMAIN = functor (O: OPTION) ->
 	(fun s (i, j) -> Printf.sprintf "%s%i <> %i\n" s i j) "     ---Print NEQ_PRED_DOMAIN---\n" t.neq in
 	List.fold_left 
 	  (fun s (i, j) -> Printf.sprintf "%s%i == %i\n" s i j) s t.eq 
-	
+
+    let clean: IntSet.t -> t -> t = fun dom t ->
+      if debug then print_debug "NEQ_DOMAIN: [Cleaning]\n";
+      { neq = List.filter (fun (i, j) -> IntSet.mem i dom && IntSet.mem j dom) t.neq;
+	eq = List.filter (fun (i, j) -> IntSet.mem i dom && IntSet.mem j dom) t.eq;
+	lives = t.lives; }
+
    end: PRED_DOMAIN) 

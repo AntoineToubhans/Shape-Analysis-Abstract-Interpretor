@@ -330,9 +330,11 @@ module MAKE_DIS_DOMAIN =
       
        let aux_filter: (int list * int list) list -> t -> t*t = fun l t -> 
 	 if debug then print_debug "DIS_DOMAIN: perform filtering....[%s]\n"
-	   (List.fold_left (fun s l -> s) "" l);
+	   (List.fold_left 
+	      (fun s (l1, l2) -> Printf.sprintf "%s%s=%s, " s (intlist2str l1) (intlist2str l2)) 
+	      "" l);
 	 match t with
-	   | D_Top -> top, top
+	   | D_Top -> top, top 
 	   | Disjunction l_t ->
 	       List.fold_left2 
 		 (fun (t1, t2) tt (l_i, l_j) ->
@@ -340,8 +342,10 @@ module MAKE_DIS_DOMAIN =
 		      List.fold_left2
 			(fun tt1 i j -> S.request_eq i j tt1) tt l_i l_j
 		    and lt2 = 
-		      List.map2
-			(fun i j -> S.request_neq i j tt) l_i l_j in
+		      List.fold_left2
+			(fun lt i j -> 
+			   if i=j then lt else (S.request_neq i j tt)::lt) 
+			[] l_i l_j in
 		    let _, tt1 = reduce_equalities [] tt1 
 		    and tt2 = Disjunction lt2 in
 		      disjunction t1 tt1, disjunction t2 tt2)

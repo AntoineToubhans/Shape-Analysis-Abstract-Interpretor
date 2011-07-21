@@ -306,7 +306,7 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
     let is_reached_by_edge: int -> (int -> offset -> bool) -> t -> bool = fun i p t ->
       if debug then print_debug "SL_GRAPH_DOMAIN: is_reached_by_edge %i p t\n" i;
       IntMap.exists
-	(fun j n -> OffsetMap.exists (fun o k -> k==i && p i o) n.edges) t.nodes
+	(fun j n -> OffsetMap.exists (fun o k -> k==i && p j o) n.edges) t.nodes
 
     (* is the node reached by some j such that: *)
     (*  -  j.c(a) *== i.c(b)                    *)
@@ -314,7 +314,7 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
     let is_reached_by_inductive: int -> (int -> Inductive.t -> bool) -> t -> bool = fun i p t -> 
       if debug then print_debug "SL_GRAPH_DOMAIN: is_reached_by_inductive %i p t\n" i;
       IntMap.exists
-	(fun j n -> has n.inductive && (get n.inductive).Inductive.target==i && p i (get n.inductive))
+	(fun j n -> has n.inductive && (get n.inductive).Inductive.target==i && p j (get n.inductive))
 	t.nodes
 
     let is_reached: int -> (int -> bool) -> t -> bool = fun i p t ->
@@ -463,6 +463,14 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
      let pp: t -> string = fun t ->
        let s = Printf.sprintf "     ---Print SL_GRAPH_DOMAIN---\nNext free node:%i\n" t.next in
 	 IntMap.fold (fun i n s -> Printf.sprintf "%s%s" s (pp_node i n)) t.nodes s
+
+     let clean: t -> t = fun t ->
+       print_debug "SL_GRAPH_DOMAIN: [Cleaning]\n";
+       { t with nodes = 
+	   IntMap.filter 
+	     (fun _ n -> not (OffsetMap.is_empty n.edges) || n.inductive != None)
+	     t.nodes }
+	 
 
 (* TESTS
 

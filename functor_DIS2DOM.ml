@@ -12,7 +12,7 @@ open Functor_SL2DIS
 (* Module Domain Functor                                       *)
 (* =========================================================== *)
 (*                                        Created: AT 06/30/11 *)
-(*                                  Last modified: AT 06/30/11 *)
+(*                                  Last modified: AT 07/21/11 *)
 
 let error(s: string) = failwith (Printf.sprintf "DOMAIN_ERROR: %s" s)
 
@@ -60,7 +60,7 @@ module MAKE_DOMAIN =
 	       begin
 		 match get_type_hv e t with
 		   | Struct s ->
-		       begin try List.assoc s (snd (StringMap.find s t.struct_decls))
+		       begin try List.assoc f (snd (StringMap.find s t.struct_decls))
 		       with | _ -> error "bad record field argument" 
 		       end 
 		   | _ -> error  
@@ -143,10 +143,14 @@ module MAKE_DOMAIN =
 	   error (Printf.sprintf "declaration of var %s : already exists..." (sc_var2str x));
 	 let fields = get_fields x.var_type t in
 	 let heap, i = D.var_alloc fields t.heap in
+	 let t = 
 	   { env = IntMap.add x.var_uniqueId i t.env;
 	     heap = heap;
 	     var_decls = StringMap.add x.var_name x t.var_decls;
-	     struct_decls = t.struct_decls;}
+	     struct_decls = t.struct_decls;} in
+	   match oe with
+	     | None -> t
+	     | Some e -> eval_sc_assignment (Var x.var_name, e) t
 
        let eval_spec: spec -> t -> t = fun s t -> 
 	 if debug then print_debug "DOMAIN: eval spec\n";
@@ -205,13 +209,17 @@ module MAKE_DOMAIN =
 	       and t_mem = ref {t with heap = D.bottom} 
 	       and t_out = ref t2 
 	       and counter = ref 0 in
+		 Printf.printf "Entering loop\n";
 		 while not (is_include !t_entry_loop !t_mem) do
 		   t_mem := !t_entry_loop;
 		   counter:= 1 + !counter;
+		   if !counter > 8 then
+		     error "can't compute a fixpoint";
+		   Printf.printf "Looping: %inth iteration\n" !counter;
 		   let t1, t2 = 
-		     if !counter <3 then
+		     if !counter < 3 then
 		       filter cond 
-			 (union t 
+			 (union t   
 			    (List.fold_left eval_sc_command !t_entry_loop block)) 
 		     else 
 		       filter cond 
@@ -219,7 +227,12 @@ module MAKE_DOMAIN =
 			    (List.fold_left eval_sc_command !t_entry_loop block)) in
 		     t_entry_loop := t1;
 		     t_out := t2;
-		 done; !t_out
+		 done; 
+		 Printf.printf "Fix Point found:\n";
+		 pp !t_entry_loop;
+		 Printf.printf "Out of the loop:\n";
+		 pp !t_out;
+		 !t_out
 	   | Spec s -> 
 	       eval_spec s t
 

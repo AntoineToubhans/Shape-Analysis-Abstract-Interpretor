@@ -28,6 +28,12 @@ module MAKE_SL_DOMAIN =
 	   
        let empty: t = G.empty, P.empty
 
+       let clean: t -> t = fun (g, p) ->
+	 if debug then print_debug "SL_DOMAIN: [Cleaning]\n";
+	 let g = G.clean g in
+	 let dom = G.domain g in
+	   g, P.clean dom p
+
        let next: t -> int = fun (g, _) -> G.next g 
     	
        (* WARNING : doesn't check the length, and nullify anyway *)
@@ -386,7 +392,7 @@ module MAKE_SL_DOMAIN =
        (* try a modus ponens reduction at node i         *)
        (*  - i.c(a) *== j.c(b)  |                        *)
        (*  - j.c(b) *== k.c(c)  | --> i.c(a) *== k.c(c)  *)
-       (*  - pred j = true      |                        *)
+       (*  - pred j = false     |                        *)
        let try_modus_ponens: int -> (int -> bool) -> t -> t option = fun i pred (g, p) -> 
  	 if debug then print_debug "SL_DOMAIN: try modus ponens at %i t\n" i;
 	 try
@@ -401,14 +407,14 @@ module MAKE_SL_DOMAIN =
 		 { Inductive.target = ind1.Inductive.target;
 		   Inductive.source_parameters = ind0.Inductive.source_parameters;
 		   Inductive.target_parameters = ind1.Inductive.target_parameters;
-		   Inductive.length = 
+		   Inductive.length =
 		     Inductive.add_length 
 		       ind0.Inductive.length
 		       ind1.Inductive.length;} in
 	       let g = 
-		 (G.remove_inductive i 
+		 (G.remove_inductive i  
 		    (G.remove_inductive ind0.Inductive.target g)) in
-		 Some (G.add_inductive i ind g, p)
+		 Some (clean (G.add_inductive i ind g, p))
 	 with 
 	   | Failure s ->  
 	       if debug then print_debug "SL_DOMAIN: failed modus ponens at node %i: %s\n" i s;
@@ -427,10 +433,20 @@ module MAKE_SL_DOMAIN =
 	   while not (IntSet.is_empty !nodes) do
 	     let i = IntSet.choose !nodes in
 	       match try_modus_ponens i (pred !rt i) !rt with
-		 | Some t -> rt:= t;
+		 | Some t -> rt:= t; 
 		 | None -> nodes:= IntSet.remove i !nodes;
-	   done;
-	   !rt
+	   done; 
+	   (* pretty dummy code             *)
+	   (* forget about inductive length *)
+	   G.fold 
+	     (fun i g ->  
+		if G.has_inductive i g then
+		  let ind = get (G.get_inductive i g) in
+		    G.update_inductive i (Inductive.forget_length ind) g
+		else 
+		  g) 
+	     (fst !rt) (fst !rt), (snd !rt)	 
+	   
 
        let equals: t -> t -> bool = fun (g1, p1) (g2, p2) -> 
 	 if debug then print_debug "SL_DOMAIN: checking [equals]\n";

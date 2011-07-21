@@ -49,9 +49,9 @@ let main () =
             failwith "Stopped" in
 (*      Printf.printf "%s\n" (Simple_C_syntax.sc_command2str c); *)
       if String.compare !kind_ind "SL" = 0 && !debug then
-	let t = SL1.eval_sc_command SL1.init c in ();
+	let _ = SL1.eval_sc_command SL1.init c in ();
       if String.compare !kind_ind "SL" = 0 && not !debug then
-	let t = SL2.eval_sc_command SL2.init c in ();
+	let _ = SL2.eval_sc_command SL2.init c in ();
 	  
 	  Printf.printf "finished...\n" 
 	
