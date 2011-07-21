@@ -47,6 +47,11 @@ type sc_cond =
   | Eq of sc_exp*sc_exp (* e1==e2 *)
   | Neq of sc_exp*sc_exp (* e1!=e2 *)
 
+let sc_neg: sc_cond -> sc_cond = 
+  function 
+    | Eq(x, y) -> Neq(x, y)
+    | Neq(x, y) -> Eq(x, y)
+
 type spec = 
   | Add_Induct of sc_hvalue * sc_exp * int list * int list 
 

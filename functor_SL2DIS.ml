@@ -181,6 +181,22 @@ module MAKE_DIS_DOMAIN =
 		   | [] -> t::acc
 		   | t1::l_t -> 
 		       begin 
+			 match S.union t t1 with
+			   | Some t -> 
+			       t::(List.append l_t acc)
+			   | None -> 
+			       insert (t1::acc) l_t t 
+		       end in
+	       let l_t = 
+		 List.fold_left (fun acc t -> insert [] acc (S.canonicalize t)) [] l_t1 in
+		 Disjunction
+		   (List.fold_left (fun acc t -> insert [] acc (S.canonicalize t)) l_t l_t2) 
+		 
+(*	       let rec insert acc l_t t = 
+		 match l_t with
+		   | [] -> t::acc
+		   | t1::l_t -> 
+		       begin 
 			 match S.widening t t1 with
 			   | Some t -> 
 			       t::(List.append l_t acc)
@@ -188,7 +204,7 @@ module MAKE_DIS_DOMAIN =
 			       insert (t1::acc) l_t t 
 		       end in
 		 Disjunction
-		   (List.fold_left (insert []) l_t1 l_t2)
+		   (List.fold_left (insert []) l_t1 l_t2) *)
 
        (* sound, but can be easely improved ... *)
        let is_include: t -> t -> bool = fun t1 t2 ->	 
@@ -426,6 +442,7 @@ module MAKE_DIS_DOMAIN =
 			 error (Printf.sprintf "Inconsistent condition %s" (sc_cond2str cond))
 		 end in
 	   if b then t1, t2 else t2, t1
+
 
        let spec_assume_inductive: int -> int -> sc_hvalue -> sc_exp -> int list -> int list -> t -> t = 
 	 fun i j e1 e2 l1 l2 t ->

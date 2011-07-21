@@ -203,8 +203,36 @@ module MAKE_DOMAIN =
 	       let t1 = List.fold_left eval_sc_command t1 b1
 	       and t2 = List.fold_left eval_sc_command t2 b2 in
 	       union t1 t2
-	   | While(cond, block) -> 
-	       let t1, t2 = filter cond t in
+	   | While(cond, block) ->
+	       (* pretty bad iterator ... *)
+	       let f t0 = 
+		 let t0 = List.fold_left eval_sc_command t0 block in
+		   filter cond (union t t0) in
+	       let f_wide t0 = 
+		 let t00, t1 = f t0 in
+		   widening t0 t00, t1 in		 
+	       let t_temp = ref { t with heap = D.bottom } in
+	       let t_fp = ref (f !t_temp) 
+	       and counter = ref 0 in
+		 Printf.printf "Entering loop\n";
+		 while not (is_include (fst !t_fp) !t_temp) do
+		   t_temp := fst !t_fp;
+		   counter:= 1 + !counter;
+		   if !counter > 8 then
+		     error "can't compute a fixpoint";
+		   Printf.printf "Looping: %inth iteration\n" !counter;
+		   if !counter < 3 then
+		     t_fp:= f !t_temp 
+		   else 
+		     t_fp:= f_wide !t_temp;
+		 done; 
+		 Printf.printf "Fix Point found:\n";
+		 pp (fst !t_fp);
+		 Printf.printf "Out of the loop:\n";
+		 pp (snd !t_fp);
+		 (snd !t_fp)
+
+(*	       let t1, t2 = filter cond t in
 	       let t_entry_loop = ref t1 
 	       and t_mem = ref {t with heap = D.bottom} 
 	       and t_out = ref t2 
@@ -217,7 +245,7 @@ module MAKE_DOMAIN =
 		     error "can't compute a fixpoint";
 		   Printf.printf "Looping: %inth iteration\n" !counter;
 		   let t1, t2 = 
-		     if !counter < 3 then
+		     if !counter < 6 then
 		       filter cond 
 			 (union t   
 			    (List.fold_left eval_sc_command !t_entry_loop block)) 
@@ -232,8 +260,8 @@ module MAKE_DOMAIN =
 		 pp !t_entry_loop;
 		 Printf.printf "Out of the loop:\n";
 		 pp !t_out;
-		 !t_out
+		 !t_out *)
 	   | Spec s -> 
-	       eval_spec s t
+	       eval_spec s t 
 
-     end: DOMAIN)
+     end: DOMAIN)  

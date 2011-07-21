@@ -260,7 +260,7 @@ module type DIS_DOMAIN =
     (* mut [o1, ..on] &x &y assign *)
     val mutation: offset list -> offset list -> int -> int -> sc_assignment -> t -> t 
       
-    val filter: offset list -> int -> int -> sc_cond -> t -> t * t
+    val filter: offset list -> int -> int -> sc_cond -> t -> t*t
 
     val spec_assume_inductive: int -> int -> sc_hvalue -> sc_exp -> int list -> int list -> t -> t
 
@@ -283,7 +283,7 @@ module type DOMAIN =
     val eval_sc_struct_decl: sc_struct_decl -> t -> t
     val eval_sc_var_decl: sc_var_decl -> t -> t
 
-    val filter : sc_cond -> t -> t* t
+    val filter : sc_cond -> t -> t*t
 
     val union: t -> t -> t
     val widening: t -> t -> t
