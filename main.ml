@@ -23,6 +23,12 @@ module O2 =
 module SL1 = MAKE_DOMAIN(MAKE_DIS_DOMAIN(MAKE_SL_DOMAIN(SList)(O1))(O1))(O1)
 module SL2 = MAKE_DOMAIN(MAKE_DIS_DOMAIN(MAKE_SL_DOMAIN(SList)(O2))(O2))(O2)
 
+module TL1 = MAKE_DOMAIN(MAKE_DIS_DOMAIN(MAKE_SL_DOMAIN(TList)(O1))(O1))(O1)
+module TL2 = MAKE_DOMAIN(MAKE_DIS_DOMAIN(MAKE_SL_DOMAIN(TList)(O2))(O2))(O2)
+
+module DLL1 = MAKE_DOMAIN(MAKE_DIS_DOMAIN(MAKE_SL_DOMAIN(DLList)(O1))(O1))(O1)
+module DLL2 = MAKE_DOMAIN(MAKE_DIS_DOMAIN(MAKE_SL_DOMAIN(DLList)(O2))(O2))(O2)
+
 let main () =
   
   (* Parsing arguments *)
@@ -47,13 +53,26 @@ let main () =
 	    Printf.printf "Exception during parsing: %s\n"
 	      (Printexc.to_string e);
             failwith "Stopped" in
+  
 (*      Printf.printf "%s\n" (Simple_C_syntax.sc_command2str c); *)
       if String.compare !kind_ind "SL" = 0 && !debug then
 	let _ = SL1.eval_sc_command SL1.init c in ();
-      if String.compare !kind_ind "SL" = 0 && not !debug then
+      else if String.compare !kind_ind "SL" = 0 && not !debug then
 	let _ = SL2.eval_sc_command SL2.init c in ();
-	  
-	  Printf.printf "finished...\n" 
+      else if String.compare !kind_ind "TL" = 0 && !debug then
+	let _ = TL1.eval_sc_command TL1.init c in ();
+      else if String.compare !kind_ind "TL" = 0 && not !debug then
+	let _ = TL2.eval_sc_command TL2.init c in ();
+      else if String.compare !kind_ind "DL" = 0 && !debug then
+	let _ = DLL1.eval_sc_command DLL1.init c in ();
+      else if String.compare !kind_ind "DL" = 0 && not !debug then
+	let _ = DLL2.eval_sc_command DLL2.init c in ();
+      else
+	begin
+	  Printf.printf "Kind of inductive not available: %s\n" !kind_ind;
+	  failwith "Stopped"
+  	end;
+      Printf.printf "finished...\n" 
 	
 
 let _ = main ()

@@ -425,6 +425,7 @@ module MAKE_SL_DOMAIN =
 
        let canonicalize: t -> t = fun t -> 
  	 if debug then print_debug "SL_DOMAIN: CANONICALIZATION\n";
+	 print_debug "%s" (G.pp (fst t));
 	 let pred t j i = P.is_live i (snd t) || G.is_reached i (fun k->k!=j) (fst t) in
 	 let nodes = ref (G.domain (fst t)) and rt = ref t in
 	   (* first try to fold at every nodes *)
