@@ -60,10 +60,15 @@ module XML_GEN =
 	 (* CSS *)
 	 printf "<style type=\"text/css\">\n.box{\nbackground-color: #FFFFCC;";
 	 printf "\nborder: 1px solid #888888;";
+	 printf "\nmargin: 10px;";
+	 printf "\npadding: 10px;";
 	 printf "\n-moz-border-radius : 5px 5px 5px 5px;";
 	 printf "\n-webkit-border-radius : 5px 5px 5px 5px;";
+	 printf "\n}\n.fl{\nfloat: left;";
 	 printf "\n}\n</style>\n";
-	 printf "</head>\n<body>\n"	   
+	 printf "</head>\n<body>\n";
+	 print_h1 
+	   (Printf.sprintf "Shape Analysis results: %s" c_file)
 
        let print_footer () =  
 	 printf "\n</body>\n</html>"

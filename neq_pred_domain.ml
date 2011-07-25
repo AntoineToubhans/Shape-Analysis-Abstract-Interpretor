@@ -89,6 +89,23 @@ module NEQ_DOMAIN = functor (O: OPTION) ->
 	if debug && not b then print_debug "NEQ_DOMAIN: [equals] ... No\n";
 	b
 
+    (* checks only inequalities                    *)
+    (* we assume that, at disjunction layer level, *)
+    (* we have no longer equalities in t           *)
+    let is_include: int IntMap.t -> int IntMap.t -> t -> t -> bool = fun m1 m2 t1 t2 ->
+      if debug then print_debug "NEQ_DOMAIN: checking [is_include]\n";
+      let b = 
+	try
+	  List.for_all 
+	    (fun (i, j) -> are_not_equal (IntMap.find i m2) (IntMap.find j m2) t1) t2.neq     
+	with
+	  | Not_found -> 
+	      false in
+	if debug && b then print_debug "NEQ_DOMAIN: [is_include] ... Yes\n";
+	if debug && not b then print_debug "NEQ_DOMAIN: [is_include] ... No\n";
+	b
+
+
     let pp: t -> unit = fun t ->
       O.XML.print_bold "Predicates:";
       List.iter

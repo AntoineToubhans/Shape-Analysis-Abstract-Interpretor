@@ -177,6 +177,7 @@ module type PRED_DOMAIN =
     val get_lives: t -> int list
 
     val equals: int IntMap.t -> int IntMap.t -> t -> t -> bool
+    val is_include: int IntMap.t -> int IntMap.t -> t -> t -> bool
 
     val pp: t -> unit
 

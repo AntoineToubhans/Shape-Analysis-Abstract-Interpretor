@@ -459,8 +459,17 @@ module MAKE_SL_DOMAIN =
 	     | None -> false
 	     | Some (m1, m2) -> P.equals m1 m2 p1 p2
 
-       (* sound and sufficient with canonicalization *)
-       let is_include: t -> t -> bool = equals
+       let is_include: t -> t -> bool = fun (g1, p1) (g2, p2) -> 
+	 if debug then print_debug "SL_DOMAIN: checking [is_include]\n";
+	 let matching_nodes: int IntMap.t = 
+	   List.fold_left 
+	     (fun m i -> IntMap.add i i m)
+	     IntMap.empty (P.get_lives p1) in
+	   (* on graphs, for now, inclusion is equality  *)
+	   (* sound and sufficient with canonicalization *)
+	   match G.equals matching_nodes matching_nodes g1 g2 with
+	     | None -> false
+	     | Some (m1, m2) -> P.is_include m1 m2 p1 p2
 
        let union: t -> t -> t option = fun t1 t2 ->
 	 if debug then print_debug "SL_DOMAIN: computing [Union]\n";
@@ -486,10 +495,10 @@ module MAKE_SL_DOMAIN =
 
        let pp: t -> unit = fun (g, p) -> 
 	 O.XML.print_center 
-	   (Printf.sprintf "SL DOMAIN with inductive of kind %s" D.name); 
+	   (Printf.sprintf "SL DOMAIN with inductive of kind <b>%s</b>" D.name); 
 	 O.XML.printf "<div class=\"box\">\n";
 	 P.pp p;
-	 G.pp g;
+	 G.pp g; 
 	 O.XML.printf "</div>\n"
 
 
