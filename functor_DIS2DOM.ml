@@ -29,6 +29,16 @@ module MAKE_DOMAIN =
 	     struct_decls: sc_struct_decl StringMap.t}
 
        let pp: t -> unit = fun t ->
+	 O.XML.print_h2 "ENVIRONMENT:";
+	 StringMap.iter
+	   (fun vn v -> O.XML.printf 
+	      (Printf.sprintf "&%s -------------> %i<br/>\n" vn (IntMap.find v.var_uniqueId t.env)))
+	   t.var_decls;
+	 O.XML.print_h2 "HEAP:"; 
+	 D.pp t.heap
+	 
+(*      
+       let pp_unit: t -> unit = fun t ->
 	 Printf.printf "**************************************\n";
 	 Printf.printf "*****-------Print DOMAIN --------*****\n";
 	 Printf.printf "**************************************\nENV:\n";
@@ -37,6 +47,7 @@ module MAKE_DOMAIN =
 	   t.var_decls;
 	 Printf.printf "HEAP:\n%s" (D.pp t.heap); 
 	 Printf.printf "**************************************\n"
+*)
 
        let init: t = 
 	 { env = IntMap.empty;
@@ -187,23 +198,29 @@ module MAKE_DOMAIN =
 
        let rec eval_sc_command: t -> sc_command -> t = fun t c -> 
 	 if debug then print_debug "DOMAIN: [rec] eval command %s\n" (sc_command2str c);
-	 Printf.printf "BEFORE: %s\n" (sc_command2str c);
-	 pp t;
+	 let print () =  
+	   O.XML.print_hr ();
+	   O.XML.print_h2 "BEFORE:";
+	   O.XML.printf (sc_command2str c); 
+	   pp t in
 	 match c with
 	   | Assignment a -> 
-	       eval_sc_assignment a t
+	       print (); eval_sc_assignment a t
 	   | StructDeclaration sd ->
 	       eval_sc_struct_decl sd t
 	   | VarDeclaration vd ->
-	       eval_sc_var_decl vd t 
+	       print (); eval_sc_var_decl vd t 
 	   | Seq block -> 
 	       List.fold_left eval_sc_command t block
 	   | If(cond, b1, b2) ->
+	       print ();
 	       let t1, t2 = filter cond t in
 	       let t1 = List.fold_left eval_sc_command t1 b1
 	       and t2 = List.fold_left eval_sc_command t2 b2 in
 	       union t1 t2
 	   | While(cond, block) ->
+	       print ();
+	       O.XML.print_h3 "Entering loop";
 	       (* pretty bad iterator ... *)
 	       let f t0 = 
 		 let t0 = List.fold_left eval_sc_command t0 block in
@@ -214,21 +231,20 @@ module MAKE_DOMAIN =
 	       let t_temp = ref { t with heap = D.bottom } in
 	       let t_fp = ref (f !t_temp) 
 	       and counter = ref 0 in
-		 Printf.printf "Entering loop\n";
 		 while not (is_include (fst !t_fp) !t_temp) do
 		   t_temp := fst !t_fp;
 		   counter:= 1 + !counter;
 		   if !counter > 8 then
 		     error "can't compute a fixpoint";
-		   Printf.printf "Looping: %inth iteration\n" !counter;
+		   O.XML.print_h3 (Printf.sprintf "Looping: %inth iteration" !counter);
 		   if !counter < 3 then
 		     t_fp:= f !t_temp 
 		   else 
 		     t_fp:= f_wide !t_temp;
 		 done; 
-		 Printf.printf "Fix Point found:\n";
+		 O.XML.print_h3 "Fix Point found:";
 		 pp (fst !t_fp);
-		 Printf.printf "Out of the loop:\n";
+		 O.XML.print_h3 "Out of the loop:";
 		 pp (snd !t_fp);
 		 (snd !t_fp)
 

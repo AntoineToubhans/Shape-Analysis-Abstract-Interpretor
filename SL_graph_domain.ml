@@ -453,16 +453,24 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
 		if debug then print_debug "SL_GRAPH_DOMAIN: [equals] no mapping found: %s\n" e;
 		None
 
-     let pp_node: int -> node -> string = fun i n ->
-       let s = Printf.sprintf "Node(%i):\n========\n" i in
-       let f = fun o j s -> Printf.sprintf "%s %i%s|---> %i\n" s i (pp_offset o) j in
-       let s = OffsetMap.fold f n.edges s in 
-	 map_default
-	   (fun ind -> Printf.sprintf "%s %i.%s\n" s i (Inductive.pp ind)) s n.inductive
+     let pp_node: int -> node -> unit = fun i n ->
+       O.XML.printf 
+	 (Printf.sprintf "Node(%i):<br/>========<br/>\n" i);
+       OffsetMap.iter
+	 (fun o j -> 
+	    O.XML.printf 
+	      (Printf.sprintf "%i%s|---> %i<br/>" i (pp_offset o) j))
+	 n.edges; 
+       match n.inductive with
+	 | Some ind ->
+	     O.XML.printf 
+	       (Printf.sprintf "%i.%s<br/>" i (Inductive.pp ind))
+	 | _ -> ()
 	      
-     let pp: t -> string = fun t ->
-       let s = Printf.sprintf "     ---Print SL_GRAPH_DOMAIN---\nNext free node:%i\n" t.next in
-	 IntMap.fold (fun i n s -> Printf.sprintf "%s%s" s (pp_node i n)) t.nodes s
+     let pp: t -> unit = fun t ->
+       O.XML.print_bold
+	 (Printf.sprintf "GRAPH (Next free node:%i):" t.next);
+       IntMap.iter pp_node t.nodes
 
      let clean: t -> t = fun t ->
        print_debug "SL_GRAPH_DOMAIN: [Cleaning]\n";

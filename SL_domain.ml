@@ -425,7 +425,7 @@ module MAKE_SL_DOMAIN =
 
        let canonicalize: t -> t = fun t -> 
  	 if debug then print_debug "SL_DOMAIN: CANONICALIZATION\n";
-	 print_debug "%s" (G.pp (fst t));
+(*	 print_debug "%s" (G.pp (fst t)); *)
 	 let pred t j i = P.is_live i (snd t) || G.is_reached i (fun k->k!=j) (fst t) in
 	 let nodes = ref (G.domain (fst t)) and rt = ref t in
 	   (* first try to fold at every nodes *)
@@ -484,10 +484,14 @@ module MAKE_SL_DOMAIN =
 	       Inductive.length = Inductive.Unknown;} in
 	     G.add_inductive i ind g, p	 
 
-       let pp: t -> string = fun (g, p) -> 
-	 Printf.sprintf 
-	   "***-------Print SL_DOMAIN --------***\n*** with inductive: %s ***\n%s%s" 
-	   D.name (P.pp p) (G.pp g)
+       let pp: t -> unit = fun (g, p) -> 
+	 O.XML.print_center 
+	   (Printf.sprintf "SL DOMAIN with inductive of kind %s" D.name); 
+	 O.XML.printf "<div class=\"box\">\n";
+	 P.pp p;
+	 G.pp g;
+	 O.XML.printf "</div>\n"
+
 
        let mk x y = 
 	 if debug then print_debug "SL_DOMAIN: MAKE ********test purposes only!\n";

@@ -465,21 +465,23 @@ module MAKE_DIS_DOMAIN =
 		     (tail_map3 
 			(fun i jj -> S.spec_assume_inductive i (List.hd jj) l1 l2) 
 			l1 ll l_t)
-       let pp: t -> string = fun t -> 
-	 let s = 
-	   match t with
-	     | Disjunction [] ->
-		 "Bottom\n"
-	     | Disjunction l ->
-		 let it = ref 0 in
-		   List.fold_left 
-		     (fun s t -> it:=!it+1;Printf.sprintf "%s**t%i:**\n%s" s !it (S.pp t))
-		     (Printf.sprintf "Disjunction: t1 || ... || t%i\n" (List.length l))
-		     l
-	     | D_Top -> 
-		 "Top\n"
-	 in
-	   "*****-----Print DIS_DOMAIN ------*****\n"^s
+
+       let pp: t -> unit = fun t -> 
+	 match t with
+	   | Disjunction [] ->
+	       O.XML.printf "_|_ (Bottom)<br/>\n"
+	   | Disjunction l ->
+	       O.XML.print_h3 (Printf.sprintf "Disjunction of %i cases" (List.length l));
+	       let it = ref 0 in
+		 List.iter
+		   (fun t -> 
+		      it:=!it+1; 
+		      O.XML.print_center (Printf.sprintf "--- t%i ---" !it);
+		      S.pp t)
+		   l
+	   | D_Top ->  
+	       O.XML.printf "Top<br/>\n"
+      
 
     end: DIS_DOMAIN)
 (*

@@ -34,13 +34,14 @@ ML_FILES=	utils.ml \
 		SL_domain.ml \
 		functor_SL2DIS.ml \
 		functor_DIS2DOM.ml \
+		xml_gen.ml \
 		$(AUTOGEN_ML) \
 		main.ml
 MLI_FILES=	$(AUTOGEN_MLI)
 CMI_FILES=	$(MLI_FILES:%.mli=%.cmi) 
 CMX_FILES=      $(ML_FILES:%.ml=%.cmx)
 analyzer: $(CMX_FILES) 
-	ocamlopt $(CMX_FILES) -o analyzer
+	ocamlopt unix.cmxa $(CMX_FILES) -o analyzer
 clean: 
 	rm -f *.cmi *.cmx *.o && \
 	rm -f analyzer *~ debug.log $(AUTOGEN) \

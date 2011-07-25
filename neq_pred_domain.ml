@@ -89,11 +89,17 @@ module NEQ_DOMAIN = functor (O: OPTION) ->
 	if debug && not b then print_debug "NEQ_DOMAIN: [equals] ... No\n";
 	b
 
-    let pp: t -> string = fun t ->
-      let s = List.fold_left 
-	(fun s (i, j) -> Printf.sprintf "%s%i <> %i\n" s i j) "     ---Print NEQ_PRED_DOMAIN---\n" t.neq in
-	List.fold_left 
-	  (fun s (i, j) -> Printf.sprintf "%s%i == %i\n" s i j) s t.eq 
+    let pp: t -> unit = fun t ->
+      O.XML.print_bold "Predicates:";
+      List.iter
+	(fun (i, j) -> 
+	   O.XML.printf 
+	     (Printf.sprintf "%i <> %i<br/>" i j)) t.neq; 
+      List.iter
+	(fun (i, j) -> 
+	   O.XML.printf 
+	     (Printf.sprintf "%i == %i<br/>" i j)) t.eq
+
 
     let clean: IntSet.t -> t -> t = fun dom t ->
       if debug then print_debug "NEQ_DOMAIN: [Cleaning]\n";

@@ -5,6 +5,27 @@ open Offset
 open Utils
 open Simple_C_syntax
 
+module type XML_GEN =
+  sig
+    val xml_file: string
+    val printf: string -> unit
+    val print_h1: string -> unit
+    val print_h2: string -> unit
+    val print_h3: string -> unit
+    val print_bold: string -> unit
+    val print_center: string -> unit
+    val print_hr: unit -> unit
+    val print_header: unit -> unit
+    val print_footer: unit -> unit
+  end
+
+module type OPTION = 
+  sig
+    val debug: bool
+    val c_file: string
+    module XML: XML_GEN
+  end
+
 module Inductive = 
   struct
 
@@ -120,7 +141,7 @@ module type SL_GRAPH_DOMAIN =
 
     val equals: int IntMap.t -> int IntMap.t -> t -> t -> (int IntMap.t * int IntMap.t) option 
 
-    val pp: t -> string
+    val pp: t -> unit
 
     val clean: t -> t
   end
@@ -157,7 +178,7 @@ module type PRED_DOMAIN =
 
     val equals: int IntMap.t -> int IntMap.t -> t -> t -> bool
 
-    val pp: t -> string
+    val pp: t -> unit
 
     val clean: IntSet.t -> t -> t
   end
@@ -232,7 +253,7 @@ sig
 
     val spec_assume_inductive: int -> int -> int list -> int list -> t -> t
 
-    val pp: t -> string
+    val pp: t -> unit
 
     val clean: t -> t
     (* test*)
@@ -264,7 +285,7 @@ module type DIS_DOMAIN =
 
     val spec_assume_inductive: int -> int -> sc_hvalue -> sc_exp -> int list -> int list -> t -> t
 
-    val pp: t -> string
+    val pp: t -> unit
 
   end 
 
@@ -292,9 +313,4 @@ module type DOMAIN =
 
   end
 
-module type OPTION = 
-  sig
-  
-    val debug: bool
-       
-  end
+

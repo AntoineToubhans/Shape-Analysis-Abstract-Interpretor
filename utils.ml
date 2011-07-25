@@ -11,7 +11,7 @@ module StringMap = Map.Make(String)
 module StringSet = Set.Make(String)
 
 let debug_channel = open_out "debug.log"
-let print_debug = fun x -> Printf.fprintf debug_channel x
+let print_debug = fun x -> Printf.fprintf debug_channel x 
   
 exception No_value
 let get: 'a option -> 'a = function | Some x -> x | None -> raise No_value
