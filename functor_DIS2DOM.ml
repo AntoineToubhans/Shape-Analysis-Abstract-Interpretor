@@ -166,11 +166,11 @@ module MAKE_DOMAIN =
        let eval_spec: spec -> t -> t = fun s t -> 
 	 if debug then print_debug "DOMAIN: eval spec\n";
 	 match s with
-	   | Add_Induct(e1, e2, l1, l2) ->
-	       let i = get_entry_point_hv e1 t
-	       and j = get_entry_point e2 t in
-		 { t with heap = D.spec_assume_inductive i j e1 e2 l1 l2 t.heap }
-	       
+	   | Canonicalize ->
+	       { t with heap = D.canonicalize t.heap }
+	   | Forget_inductive_length ->	
+	       { t with heap = D.forget_inductive_length t.heap }
+		       
        let filter: sc_cond -> t -> t * t = fun c t -> 
 	 if debug then print_debug "DOMAIN: filter %s\n" (sc_cond2str c);
 	 let ei, ej = 
@@ -221,6 +221,34 @@ module MAKE_DOMAIN =
 	   | While(cond, block) ->
 	       print ();
 	       O.XML.print_h3 "Entering loop";
+
+	       let f_iter t0 = 
+		 let t0, _ = filter cond (union t t0) in
+		   List.fold_left eval_sc_command t0 block in
+
+	       let t_temp = ref { t with heap = D.bottom } 
+	       and t_fp = ref (f_iter { t with heap = D.bottom })
+	       and counter = ref 0 in
+
+		 while not (is_include !t_fp !t_temp) do
+		   t_temp := !t_fp;
+		   counter:= 1 + !counter;
+		   if !counter > 8 then
+		     error "can't compute a fixpoint";
+		   O.XML.print_h3 (Printf.sprintf "Looping: %inth iteration" !counter);
+		   t_fp:= f_iter !t_fp; 
+		   if !counter >= 3 then 
+		     t_fp:= widening !t_temp !t_fp;
+		 done; 
+		 let t_fp, t_out = filter cond (union t !t_fp) in
+		   O.XML.print_h3 "Fix Point found: (at the begining of the loop)";
+		   pp t_fp;
+		   O.XML.print_h3 "Out of the loop:";
+		   pp t_out;
+		   t_out
+
+	   (*  print ();
+	       O.XML.print_h3 "Entering loop";
 	       (* pretty bad iterator ... *)
 	       let f t0 = 
 		 let t0 = List.fold_left eval_sc_command t0 block in
@@ -246,38 +274,11 @@ module MAKE_DOMAIN =
 		 pp (fst !t_fp);
 		 O.XML.print_h3 "Out of the loop:";
 		 pp (snd !t_fp);
-		 (snd !t_fp)
+		 (snd !t_fp) *)
 
-(*	       let t1, t2 = filter cond t in
-	       let t_entry_loop = ref t1 
-	       and t_mem = ref {t with heap = D.bottom} 
-	       and t_out = ref t2 
-	       and counter = ref 0 in
-		 Printf.printf "Entering loop\n";
-		 while not (is_include !t_entry_loop !t_mem) do
-		   t_mem := !t_entry_loop;
-		   counter:= 1 + !counter;
-		   if !counter > 8 then
-		     error "can't compute a fixpoint";
-		   Printf.printf "Looping: %inth iteration\n" !counter;
-		   let t1, t2 = 
-		     if !counter < 6 then
-		       filter cond 
-			 (union t   
-			    (List.fold_left eval_sc_command !t_entry_loop block)) 
-		     else 
-		       filter cond 
-			 (widening t 
-			    (List.fold_left eval_sc_command !t_entry_loop block)) in
-		     t_entry_loop := t1;
-		     t_out := t2;
-		 done; 
-		 Printf.printf "Fix Point found:\n";
-		 pp !t_entry_loop;
-		 Printf.printf "Out of the loop:\n";
-		 pp !t_out;
-		 !t_out *)
+
 	   | Spec s -> 
+	       print ();
 	       eval_spec s t 
 
      end: DOMAIN)  

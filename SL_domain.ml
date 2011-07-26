@@ -26,6 +26,11 @@ module MAKE_SL_DOMAIN =
 
        type t = G.t * P.t
 	   
+       let p1: t -> G.t = fun (g, p) -> g
+       let p2: t -> P.t = fun (g, p) -> p
+
+       let prod: ('a -> G.t) -> ('a -> P.t) -> 'a -> t = fun g p a -> (g a, p a)
+
        let empty: t = G.empty, P.empty
 
        let clean: t -> t = fun (g, p) ->
@@ -44,8 +49,10 @@ module MAKE_SL_DOMAIN =
 	   let p = 
 	     List.fold_left2 
 	       (fun g x y -> P.add_eq x y g)
-	       (P.add_eq i ind.Inductive.target p) ind.Inductive.source_parameters ind.Inductive.target_parameters in
-	     (G.remove_inductive i g, p)
+	       (P.add_eq i ind.Inductive.target p) 
+	       ind.Inductive.source_parameters 
+	       ind.Inductive.target_parameters in
+	     (G.clean_node i (G.remove_inductive i g), p)
 	 with
 	   | No_value -> 
 	       error (Printf.sprintf "can not nullify inductive from %i: there's no inductive" i)
@@ -422,6 +429,7 @@ module MAKE_SL_DOMAIN =
 	   | _ ->  
 	       if debug then print_debug "SL_DOMAIN: failed modus ponens at node %i\n" i;
 	       None
+	 
 
        let canonicalize: t -> t = fun t -> 
  	 if debug then print_debug "SL_DOMAIN: CANONICALIZATION\n";
@@ -439,14 +447,15 @@ module MAKE_SL_DOMAIN =
 	   done; 
 	   (* pretty dummy code             *)
 	   (* forget about inductive length *)
-	   G.fold 
+(*	   G.fold 
 	     (fun i g ->  
 		if G.has_inductive i g then
 		  let ind = get (G.get_inductive i g) in
 		    G.update_inductive i (Inductive.forget_length ind) g
 		else 
 		  g) 
-	     (fst !rt) (fst !rt), (snd !rt)	 
+	     (fst !rt) (fst !rt), (snd !rt)	 *)
+	   (G.forget_inductive_length (fst !rt)), (snd !rt)
 	   
 
        let equals: t -> t -> bool = fun (g1, p1) (g2, p2) -> 
@@ -479,19 +488,10 @@ module MAKE_SL_DOMAIN =
 
        let widening: t -> t -> t option = fun t1 t2 ->
 	 if debug then print_debug "SL_DOMAIN: computing [Widening]\n";
-	 let t1 = canonicalize t1 and t2 = canonicalize t2 in
+	 let t2 = canonicalize t2 in
 	   if is_include t1 t2 then Some t2 
 	   else if is_include t2 t1 then Some t1
 	   else None
-
-       let spec_assume_inductive: int -> int -> int list -> int list -> t -> t = 
-	 fun i j li lj (g, p) ->
-	   let ind = 
-	     { Inductive.target = j;
-	       Inductive.source_parameters = li;
-	       Inductive.target_parameters = lj;
-	       Inductive.length = Inductive.Unknown;} in
-	     G.add_inductive i ind g, p	 
 
        let pp: t -> unit = fun (g, p) -> 
 	 O.XML.print_center 

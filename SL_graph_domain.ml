@@ -454,10 +454,10 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
 		None
 
      let pp_node: int -> node -> unit = fun i n ->
-       O.XML.printf 
-	 (Printf.sprintf "Node(%i):<br/>========<br/>\n" i);
+       O.XML.print_italic 
+	 (Printf.sprintf "Node(%i):" i);
        OffsetMap.iter
-	 (fun o j -> 
+	 (fun o j ->  
 	    O.XML.printf 
 	      (Printf.sprintf "%i%s|---> %i<br/>" i (pp_offset o) j))
 	 n.edges; 
@@ -472,6 +472,13 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
 	 (Printf.sprintf "GRAPH (Next free node:%i):" t.next);
        IntMap.iter pp_node t.nodes
 
+     let clean_node: int -> t -> t = fun i t ->
+       print_debug "SL_GRAPH_DOMAIN: Cleaning node %i\n" i;
+       if is_node_empty i t then
+	 { t with nodes = IntMap.remove i t.nodes }
+       else
+	 t
+
      let clean: t -> t = fun t ->
        print_debug "SL_GRAPH_DOMAIN: [Cleaning]\n";
        { t with nodes = 
@@ -479,6 +486,18 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
 	     (fun _ n -> not (OffsetMap.is_empty n.edges) || n.inductive != None)
 	     t.nodes }
 	 
+     let forget_inductive_length: t -> t = fun t ->
+       if debug then print_debug "SL_GRAPH_DOMAIN: forget inductive length\n";
+       let nodes = 
+	 IntMap.map 
+	   (fun n -> 
+	      match n.inductive with
+		| Some ind ->
+		    { n with inductive = Some(Inductive.forget_length ind) }
+		| _ -> n) 
+	   t.nodes in
+	 { t with nodes = nodes }
+
 
 (* TESTS
 

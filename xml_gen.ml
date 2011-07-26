@@ -49,6 +49,9 @@ module XML_GEN =
        let print_bold s = 
 	 Printf.fprintf channel "<b>%s</b><br/>\n" s
 
+       let print_italic s = 
+	 Printf.fprintf channel "<i>%s</i><br/>\n" s
+
        let print_center s = 
 	 Printf.fprintf channel "<center>%s</center>\n" s
 
@@ -72,5 +75,15 @@ module XML_GEN =
 
        let print_footer () =  
 	 printf "\n</body>\n</html>"
+
+       let print_list: ('a -> string) -> string -> 'a list -> unit = fun pp sep l ->
+	 match l with
+	   | [] -> ()
+	   | x::l -> 
+	       printf (pp x);
+	       List.iter
+		 (fun x -> 
+		    printf (sep^(pp x)))
+		 l
 
      end: XML_GEN) 

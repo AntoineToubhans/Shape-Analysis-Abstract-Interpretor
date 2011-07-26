@@ -37,7 +37,7 @@
 %token IF ELSE WHILE
 %token MALLOC NULL
 %token VOID MAIN
-%token SPEC_ASSUME_INDUCT
+%token SPEC_CANON SPEC_FORGET_IND_LENGTH
 %token EOF 
 
 %left LBRACKET
@@ -46,8 +46,6 @@
 
 %start main file
 
-
-%type <int list> intlist
 %type <Simple_C_syntax.sc_command> file main command 
 %type <sc_block> block
 %type <sc_type> p_type
@@ -82,13 +80,10 @@ command:
                             { If ($3, $6, []) }
   | WHILE LPAREN cond RPAREN LBRACE block RBRACE
                             { While ($3, $6) }
-  | SPEC_ASSUME_INDUCT LPAREN hvalue COMMA expr COMMA LBRACKET 
-    intlist RBRACKET COMMA LBRACKET intlist RBRACKET RPAREN SEMICOLON
-                            { Spec(Add_Induct($3, $5, $8, $12)) }
-
-intlist:
-  CST_INT                   { [$1] }
-  
+  | SPEC_CANON SEMICOLON
+                            { Spec(Canonicalize) }
+  | SPEC_FORGET_IND_LENGTH SEMICOLON
+                            { Spec(Forget_inductive_length) }
 
 p_type:
   INT                       { ScInt }

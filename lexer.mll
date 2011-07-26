@@ -52,8 +52,10 @@ rule initial = parse
   | "while"     { WHILE }
   | "malloc"    { MALLOC }
   | "NULL"      { NULL }
-  | "_assume_inductive"
-                { SPEC_ASSUME_INDUCT }
+  | "canonicalize"
+                { SPEC_CANON }
+  | "forget_inductive_length"
+                { SPEC_FORGET_IND_LENGTH }
   | "SPEC_"     { comment lexbuf }
   | eof	        { EOF }
   | ident as s  { ID s } 

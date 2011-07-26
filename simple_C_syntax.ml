@@ -53,7 +53,8 @@ let sc_neg: sc_cond -> sc_cond =
     | Neq(x, y) -> Eq(x, y)
 
 type spec = 
-  | Add_Induct of sc_hvalue * sc_exp * int list * int list 
+  | Canonicalize
+  | Forget_inductive_length
 
 type sc_command = 
     | Assignment of sc_assignment
@@ -137,11 +138,11 @@ let sc_cond2str(c: sc_cond) =
 
 let spec2str(s: spec) =
   match s with
-    | Add_Induct(e1, e2, l1, l2) ->
-	Printf.sprintf "/* _SPEC \n\tAdd_inductive(%s, %s, %s, %s)\n SPEC_ */\n"
-	  (sc_hvalue2str e1) (sc_exp2str e2)
-	  (intlist2str l1)
-	  (intlist2str l2)
+    | Canonicalize ->
+	"/* _SPEC \n\tcanonicalize\n SPEC_ */\n"
+    | Forget_inductive_length ->  
+	"/* _SPEC \n\tforget_inductive_length\n SPEC_ */\n"
+
 
 let rec sc_command2str (p: sc_command)=
   match p with

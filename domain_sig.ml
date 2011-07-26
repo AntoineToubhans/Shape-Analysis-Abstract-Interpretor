@@ -13,10 +13,12 @@ module type XML_GEN =
     val print_h2: string -> unit
     val print_h3: string -> unit
     val print_bold: string -> unit
+    val print_italic: string -> unit
     val print_center: string -> unit
     val print_hr: unit -> unit
     val print_header: unit -> unit
     val print_footer: unit -> unit
+    val print_list: ('a -> string) -> string -> 'a list -> unit
   end
 
 module type OPTION = 
@@ -143,6 +145,9 @@ module type SL_GRAPH_DOMAIN =
 
     val pp: t -> unit
 
+    val forget_inductive_length: t -> t
+
+    val clean_node: int -> t -> t
     val clean: t -> t
   end
 
@@ -214,6 +219,10 @@ sig
     type t
     val empty: t
 
+    val p1: t -> G.t
+    val p2: t -> P.t
+    val prod: ('a -> G.t) -> ('a -> P.t) -> 'a -> t
+
     val next: t -> int
 
     val request_eq: int -> int -> t -> t
@@ -252,8 +261,6 @@ sig
     val union: t -> t -> t option
     val widening: t -> t -> t option
 
-    val spec_assume_inductive: int -> int -> int list -> int list -> t -> t
-
     val pp: t -> unit
 
     val clean: t -> t
@@ -284,9 +291,11 @@ module type DIS_DOMAIN =
       
     val filter: offset list -> int -> int -> sc_cond -> t -> t*t
 
-    val spec_assume_inductive: int -> int -> sc_hvalue -> sc_exp -> int list -> int list -> t -> t
-
     val pp: t -> unit
+
+    (* spec functions *)
+    val forget_inductive_length: t -> t
+    val canonicalize: t -> t
 
   end 
 

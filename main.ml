@@ -52,8 +52,9 @@ module DL = MAKE_DOMAIN(MAKE_DIS_DOMAIN(MAKE_SL_DOMAIN(DLList)(O))(O))(O)
 
 let _  =
   O.XML.print_header ();
+(*  O.XML.printf (Simple_C_syntax.sc_command2str c); *)
   if String.compare !kind_ind "SL" = 0 then
-    ignore (SL.eval_sc_command SL.init c)
+    ignore (SL.eval_sc_command SL.init c) 
   else if String.compare !kind_ind "TL" = 0 then
     ignore (TL.eval_sc_command TL.init c)
   else if String.compare !kind_ind "DL" = 0 then

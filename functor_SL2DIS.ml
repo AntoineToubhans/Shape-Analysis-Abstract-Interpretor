@@ -171,6 +171,8 @@ module MAKE_DIS_DOMAIN =
 		 Disjunction
 		   (List.fold_left (insert []) l_t1 l_t2)
 
+       (* Widening from canonicalization:    *)
+       (*  Widening(a, b):= Union(a, can(b)) *)
        let widening: t -> t -> t = fun t1 t2 ->
 	 if debug then print_debug "DIS_DOMAIN: computing [Widening]\n";
 	 match t1, t2 with
@@ -188,23 +190,10 @@ module MAKE_DIS_DOMAIN =
 			       insert (t1::acc) l_t t 
 		       end in
 	       let l_t = 
-		 List.fold_left (fun acc t -> insert [] acc (S.canonicalize t)) [] l_t1 in
+		 List.fold_left (fun acc t -> insert [] acc (S.canonicalize t)) [] l_t1 in 
 		 Disjunction
-		   (List.fold_left (fun acc t -> insert [] acc (S.canonicalize t)) l_t l_t2) 
+		   (List.fold_left (fun l_t t -> insert [] l_t (S.canonicalize t)) l_t l_t2) 
 		 
-(*	       let rec insert acc l_t t = 
-		 match l_t with
-		   | [] -> t::acc
-		   | t1::l_t -> 
-		       begin 
-			 match S.widening t t1 with
-			   | Some t -> 
-			       t::(List.append l_t acc)
-			   | None -> 
-			       insert (t1::acc) l_t t 
-		       end in
-		 Disjunction
-		   (List.fold_left (insert []) l_t1 l_t2) *)
 
        (* sound, but can be easely improved ... *)
        let is_include: t -> t -> bool = fun t1 t2 ->	 
@@ -444,28 +433,6 @@ module MAKE_DIS_DOMAIN =
 	   if b then t1, t2 else t2, t1
 
 
-       let spec_assume_inductive: int -> int -> sc_hvalue -> sc_exp -> int list -> int list -> t -> t = 
-	 fun i j e1 e2 l1 l2 t ->
-	   let t, l2 = 
-	     match e2 with
-	       | HValue e2 -> 
-		   let t, l2, o2 = get_sc_hvalue e2 j t in
-		     if o2 != Zero then
-		       error "Spec assertion Failure";
-	             t, l2
-	       | VValue e2 -> 
-     		   get_sc_vvalue e2 j [] t in
-	   let t, l1, o1, ll = get_sc_hvalue2 e1 i t (List.map (fun i -> [i]) l2) in
-	     if o1 != Zero then
-	       error "Spec assertion Failure";
-	     match t with
-	       | D_Top -> D_Top
-	       | Disjunction l_t -> 
-		   Disjunction 
-		     (tail_map3 
-			(fun i jj -> S.spec_assume_inductive i (List.hd jj) l1 l2) 
-			l1 ll l_t)
-
        let pp: t -> unit = fun t -> 
 	 match t with
 	   | Disjunction [] ->
@@ -481,7 +448,24 @@ module MAKE_DIS_DOMAIN =
 		   l
 	   | D_Top ->  
 	       O.XML.printf "Top<br/>\n"
-      
+
+
+       (**************** spec functions *********************)
+       let forget_inductive_length: t -> t = fun t -> 
+      	 if debug then print_debug "DIS_DOMAIN: spec [FORGET INDUCTIVE LENGTH]\n";
+	 match t with
+	   | D_Top -> D_Top
+	   | Disjunction l_t ->
+	       let fil = S.prod 
+		 (fun t -> S.G.forget_inductive_length (S.p1 t)) S.p2 in		 
+		 Disjunction (List.map fil l_t)
+
+       let canonicalize: t -> t = fun t ->
+      	 if debug then print_debug "DIS_DOMAIN: spec [CANONICALIZE]\n";
+	 match t with
+	   | D_Top -> D_Top
+	   | Disjunction l_t ->
+	       Disjunction (List.map S.canonicalize l_t)
 
     end: DIS_DOMAIN)
 (*
