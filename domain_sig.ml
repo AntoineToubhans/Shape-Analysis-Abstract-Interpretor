@@ -251,7 +251,7 @@ sig
     val mutate: int -> offset -> int -> t -> t
 
     val try_fold: int -> t -> t option
-    val try_modus_ponens: int -> (int -> bool) -> t -> t option
+    val try_modus_ponens: int -> (int -> bool) -> (int list -> bool) -> t -> t option
     val canonicalize: t -> t  
 
     val equals: t -> t -> bool

@@ -22,7 +22,24 @@ module MAKE_SL_DOMAIN =
        module G = SL_GRAPH_DOMAIN(O)
        module D = D
 
-       let debug = O.debug
+       let position_backward_reseach_in_ind_args: int list = 
+	 (*  D.F(this_node, args, fresh)   *)
+	 (*  contains this_node somewhere  *)
+	 (*  !!! kinda ugly style here !   *)
+	 let rec mk i n acc = 
+	   if n==0 then acc else mk i (n-1) (i::acc) in
+	 let l = 
+	   D.new_parameters 
+	     1 (mk 0 D.number_of_parameters [])
+	     (mk 0 D.number_of_fresh []) in
+	 let rec get0 n l acc = 
+	   match l with 
+	     | [] -> acc 
+	     | 1::l -> get0 (n+1) l (n::acc) 
+	     | _::l -> get0 (n+1) l acc in
+	   get0 0 l [] 
+
+      let debug = O.debug
 
        type t = G.t * P.t
 	   
@@ -70,6 +87,28 @@ module MAKE_SL_DOMAIN =
 	 if debug then print_debug "SL_DOMAIN: request_neq %i %i t\n" i j;
 	 g, P.check_bottom (P.add_neq i j p)    
 
+       (* checks inductive like:                 *)
+       (*  a.ind(par) *= b.ind(par')             *)
+       (* where 0 belongs to par'                *)
+       (* it might be botomize in certain cases: *)
+       (* for instance: a.dll(0) *= b.dll(0)     *)
+       (* could be nullify                       *)
+       let check_wrong_inductive: t -> t = fun t ->  
+	 if debug then print_debug "SL_DOMAIN: check wrong inductive\n";
+	 if position_backward_reseach_in_ind_args=[] then t 
+	 else 
+	   G.fold
+	     (fun i (g, p) ->
+		match G.get_inductive i g with
+		  | Some ind ->
+		      if List.exists 
+			(fun n -> List.nth ind.Inductive.target_parameters n = 0)
+			position_backward_reseach_in_ind_args then
+			  nullify_inductive i (g, p)
+		      else g, p
+		  | _ -> g, p) 
+	     (fst t) t 		  
+
        (* fusion i j t gets t true means i was deleted *)
        (* fusion i j t gets t false means j was deleted*)
        let fusion: int -> int -> t -> t*bool = fun i j (g, p) ->
@@ -78,9 +117,14 @@ module MAKE_SL_DOMAIN =
 	 if P.is_live i p && P.is_live j p && i!=j then raise Bottom; 
 	 let opt_ind_i = G.get_inductive i g and opt_ind_j = G.get_inductive j g
 	 and do_fusion i j g p = 
-	   if P.is_live j p then (G.fusion i j g, P.check_bottom (P.fusion i j p)), true 
-	   else (G.fusion j i g, P.check_bottom (P.fusion j i p)), false 
-	 in
+	   let t, b = 
+	     if P.is_live j p || (not(P.is_live i p) && i>j) then 
+	       (G.fusion i j g, P.check_bottom (P.fusion i j p)), true 
+	     else  
+	       (G.fusion j i g, P.check_bottom (P.fusion j i p)), false in
+	     if i=0 || j=0 then
+	       check_wrong_inductive t, b
+	     else t, b in
 	   if i==j then (g, p), true else  
 	     match opt_ind_i, opt_ind_j, i, j with
 	       | Some ind_i, Some ind_j, _, _ ->
@@ -279,7 +323,7 @@ module MAKE_SL_DOMAIN =
 	   | Invalid_argument _ ->	   
 	       error (Printf.sprintf "inductive from %i ill-formed" i)
   
-       let search: int -> offset -> t -> int * t = fun i o (g, p) -> 
+      let search: int -> offset -> t -> int * t = fun i o (g, p) -> 
 	 if debug then print_debug "SL_DOMAIN: search for %i%s\n" i (pp_offset o);
 	 try get (G.get_edge i o g), (g, p) 
 	 with | No_value ->
@@ -291,27 +335,11 @@ module MAKE_SL_DOMAIN =
 	     let g, p = unfold i (g, p) in
 	       (* this can NOT fail *)
 	       get (G.get_edge i o g), (g, p)
-	   else 
-	   (* first we check wether         *)
-	   (*  D.F(node, args, fresh)       *)
-	   (*  contains node somewhere      *)
-	   (*  !!! kinda ugly style there ! *)
-	   let rec mk i n acc = 
-	     if n==0 then acc else mk i (n-1) (i::acc) in
-	   let l = 
-	     D.new_parameters 
-	       1 (mk 0 D.number_of_parameters [])
-	       (mk 0 D.number_of_fresh []) in
-	   let rec get0 n l acc = 
-	     match l with 
-	       | [] -> acc 
-	       | 1::l -> get0 (n+1) l (n::acc) 
-	       | _::l -> get0 (n+1) l acc in
-	   let pos_back = get0 0 l [] in
+	   else begin	     
 	     (* we get all the nodes j s.t.   *)
 	     (*  j.ind(_) *= _.ind(d1,...,dn) *)
 	     (*  i = some dk                  *)
-	     if pos_back=[] then 
+	     if position_backward_reseach_in_ind_args=[] then 
 	       (* backtrack unfold research WILL fail *)
 	       raise Top;
 	     let p_candidates, u_candidates =  
@@ -322,7 +350,7 @@ module MAKE_SL_DOMAIN =
 		      | Some ind ->
 			  if List.exists
 			    (fun n -> List.nth ind.Inductive.target_parameters n=i) 
-			    pos_back then
+			    position_backward_reseach_in_ind_args then
 			      if ind.Inductive.length=Inductive.Unknown then
 				p, (j::u)
 			      else
@@ -332,7 +360,7 @@ module MAKE_SL_DOMAIN =
 		 g ([], []) in 
 	       (* so far, we have computed the set of candidates *)
 	       (* - either it's empty: we raise Top              *)
-	       (* - either it conatains one elements:            *)
+	       (* - either it contains one elements:             *)
 	       (*   we try backward unfolding                    *)
 	       (* - either it contains more elements:            *)
 	       (*   we've to deal with conflicts...              *)
@@ -355,6 +383,7 @@ module MAKE_SL_DOMAIN =
 		       (* we MUST have i=j in P *)
 		       get (G.get_edge j o g), (g, p)
 		 | j::_ -> raise Bottom
+	   end
 
        let mutate: int -> offset -> int -> t -> t = fun i o j (g, p) ->
 	 if debug then print_debug "SL_DOMAIN: mutate [%i%s := %i]\n" i (pp_offset o) j;
@@ -400,11 +429,15 @@ module MAKE_SL_DOMAIN =
        (*  - i.c(a) *== j.c(b)  |                        *)
        (*  - j.c(b) *== k.c(c)  | --> i.c(a) *== k.c(c)  *)
        (*  - pred j = false     |                        *)
-       let try_modus_ponens: int -> (int -> bool) -> t -> t option = fun i pred (g, p) -> 
+       (*  - pred_i_a b = false |                        *)
+       let try_modus_ponens: int -> (int -> bool) -> (int list -> bool) -> t -> t option = 
+	 fun i pred pred_ind_args (g, p) -> 
  	 if debug then print_debug "SL_DOMAIN: try modus ponens at %i t\n" i;
 	 try
 	   let ind0 = get (G.get_inductive i g) in
-	     if pred ind0.Inductive.target then failwith "predicate failure";
+	     if pred ind0.Inductive.target 
+	       || pred_ind_args ind0.Inductive.target_parameters then 
+		 failwith "predicate failure";
 	     let ind1 = get (G.get_inductive ind0.Inductive.target g) in
 	       if List.exists2 (fun x y -> x!=y) 
 		 ind0.Inductive.target_parameters 
@@ -430,10 +463,19 @@ module MAKE_SL_DOMAIN =
 	       if debug then print_debug "SL_DOMAIN: failed modus ponens at node %i\n" i;
 	       None
 	 
+       (* here we're building a predicate    *)
+       (* over inductive args which will     *)
+       (* be removed if modus ponnens occurs *)
+       let pred_ind_args t (l: int list): bool = 
+	 List.exists
+	   (fun n ->
+	      let i = List.nth l n in
+		G.is_reached_by_edge i (fun _ _ -> true) (fst t)
+		&& G.is_node_empty i (fst t))
+	   position_backward_reseach_in_ind_args
 
        let canonicalize: t -> t = fun t -> 
  	 if debug then print_debug "SL_DOMAIN: CANONICALIZATION\n";
-(*	 print_debug "%s" (G.pp (fst t)); *)
 	 let pred t j i = P.is_live i (snd t) || G.is_reached i (fun k->k!=j) (fst t) in
 	 let nodes = ref (G.domain (fst t)) and rt = ref t in
 	   (* first try to fold at every nodes *)
@@ -441,20 +483,12 @@ module MAKE_SL_DOMAIN =
 	   (* then we try modus ponens *)
 	   while not (IntSet.is_empty !nodes) do
 	     let i = IntSet.choose !nodes in
-	       match try_modus_ponens i (pred !rt i) !rt with
+	       match try_modus_ponens i (pred !rt i) (pred_ind_args !rt) !rt with
 		 | Some t -> rt:= t; 
 		 | None -> nodes:= IntSet.remove i !nodes;
 	   done; 
 	   (* pretty dummy code             *)
 	   (* forget about inductive length *)
-(*	   G.fold 
-	     (fun i g ->  
-		if G.has_inductive i g then
-		  let ind = get (G.get_inductive i g) in
-		    G.update_inductive i (Inductive.forget_length ind) g
-		else 
-		  g) 
-	     (fst !rt) (fst !rt), (snd !rt)	 *)
 	   (G.forget_inductive_length (fst !rt)), (snd !rt)
 	   
 
@@ -494,8 +528,8 @@ module MAKE_SL_DOMAIN =
 	   else None
 
        let pp: t -> unit = fun (g, p) -> 
-	 O.XML.print_center 
-	   "SL DOMAIN with inductive of kind <b>%s</b>" D.name; 
+	 O.XML.print_center "SL DOMAIN";
+	 O.XML.print_center "(inductive: <b>%s</b>)" D.name; 
 	 O.XML.printf "<div class=\"box_SL\">\n";
 	 P.pp p;
 	 O.XML.printf "</div>\n<div class=\"box_SL\">\n";
