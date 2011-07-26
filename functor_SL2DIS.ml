@@ -171,8 +171,8 @@ module MAKE_DIS_DOMAIN =
 		 Disjunction
 		   (List.fold_left (insert []) l_t1 l_t2)
 
-       (* Widening from canonicalization:    *)
-       (*  Widening(a, b):= Union(a, can(b)) *)
+       (* Widening from canonicalization:         *)
+       (*  Widening(a, b):= Union(can(a), can(b)) *)
        let widening: t -> t -> t = fun t1 t2 ->
 	 if debug then print_debug "DIS_DOMAIN: computing [Widening]\n";
 	 match t1, t2 with
@@ -438,14 +438,19 @@ module MAKE_DIS_DOMAIN =
 	   | Disjunction [] ->
 	       O.XML.printf "_|_ (Bottom)<br/>\n"
 	   | Disjunction l ->
-	       O.XML.print_h3 (Printf.sprintf "Disjunction of %i cases" (List.length l));
+	       O.XML.print_h3 "Disjunction of %i cases" (List.length l);
+	       O.XML.printf "<div class=\"box_E\">\n";
 	       let it = ref 0 in
-		 List.iter
+		 List.iter 
 		   (fun t -> 
 		      it:=!it+1; 
-		      O.XML.print_center (Printf.sprintf "--- t%i ---" !it);
-		      S.pp t)
-		   l
+		      O.XML.printf "<div class=\"fl box_D\" onclick=\"unfold(this)\">\n";
+		      O.XML.print_center "--- t%i ---" !it;
+		      O.XML.printf "<div style=\"display:none;\">";
+		      S.pp t;
+		      O.XML.printf "</div></div>\n")
+		   l;
+		 O.XML.printf "</div>\n"
 	   | D_Top ->  
 	       O.XML.printf "Top<br/>\n"
 

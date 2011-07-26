@@ -454,22 +454,18 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
 		None
 
      let pp_node: int -> node -> unit = fun i n ->
-       O.XML.print_italic 
-	 (Printf.sprintf "Node(%i):" i);
+       O.XML.print_italic "Node(%i):<br/>" i;
        OffsetMap.iter
 	 (fun o j ->  
-	    O.XML.printf 
-	      (Printf.sprintf "%i%s|---> %i<br/>" i (pp_offset o) j))
+	    O.XML.printf "%i%s|---> %i<br/>" i (pp_offset o) j)
 	 n.edges; 
        match n.inductive with
 	 | Some ind ->
-	     O.XML.printf 
-	       (Printf.sprintf "%i.%s<br/>" i (Inductive.pp ind))
+	     O.XML.printf "%i.%s<br/>" i (Inductive.pp ind)
 	 | _ -> ()
 	      
      let pp: t -> unit = fun t ->
-       O.XML.print_bold
-	 (Printf.sprintf "GRAPH (Next free node:%i):" t.next);
+       O.XML.print_bold "GRAPH (Next free node:%i):<br/>" t.next;
        IntMap.iter pp_node t.nodes
 
      let clean_node: int -> t -> t = fun i t ->

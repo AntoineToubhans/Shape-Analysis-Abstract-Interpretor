@@ -107,15 +107,13 @@ module NEQ_DOMAIN = functor (O: OPTION) ->
 
 
     let pp: t -> unit = fun t ->
-      O.XML.print_bold "Predicates:";
+      O.XML.print_bold "Predicates:<br/>";
       List.iter
 	(fun (i, j) -> 
-	   O.XML.printf 
-	     (Printf.sprintf "%i <> %i<br/>" i j)) t.neq; 
+	   O.XML.printf "%i <> %i<br/>" i j) t.neq; 
       List.iter
 	(fun (i, j) -> 
-	   O.XML.printf 
-	     (Printf.sprintf "%i == %i<br/>" i j)) t.eq
+	   O.XML.printf "%i == %i<br/>" i j) t.eq
 
 
     let clean: IntSet.t -> t -> t = fun dom t ->

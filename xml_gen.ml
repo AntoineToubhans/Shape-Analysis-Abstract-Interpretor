@@ -31,59 +31,132 @@ module XML_GEN =
 
        let channel = open_out xml_file
 
-       let fprintf = 
-	 fun x -> Printf.fprintf channel x
+       let printf x = Printf.fprintf channel x
 
-       let printf s = 
-	 Printf.fprintf channel "%s" s
+       let print_h1 x =
+	 printf ("<h1 class=\"cl\">" ^^ x ^^ "</h1>\n") 
 
-       let print_h1 s = 
-	 Printf.fprintf channel "<h1>%s</h1>\n" s
+       let print_h2 x =
+	 printf ("<h2 class=\"cl\">" ^^ x ^^ "</h2>\n") 
 
-       let print_h2 s = 
-	 Printf.fprintf channel "<h2>%s</h2>\n" s
+       let print_h3 x =
+	 printf ("<h3 class=\"cl\">" ^^ x ^^ "</h3>\n") 
 
-       let print_h3 s = 
-	 Printf.fprintf channel "<h3>%s</h3>\n" s
+       let print_bold x = 
+	 printf ("<b>" ^^ x ^^ "</b>") 
 
-       let print_bold s = 
-	 Printf.fprintf channel "<b>%s</b><br/>\n" s
+       let print_italic x = 
+	 printf ("<i>" ^^ x ^^ "</i>") 
 
-       let print_italic s = 
-	 Printf.fprintf channel "<i>%s</i><br/>\n" s
+       let print_center x = 
+	 printf ("<center>" ^^ x ^^ "</center>\n") 
 
-       let print_center s = 
-	 Printf.fprintf channel "<center>%s</center>\n" s
+       let print_hr () = printf "<hr class=\"cl\"/>\n"
 
-       let print_hr s = Printf.fprintf channel "<hr />\n"
+       type css_class = 
+	   { name: string;
+	     properties: string list;
+	     values: string list; }
+
+       let print_css_class (c:css_class) =
+	 printf "%s{\n" c.name;
+	 List.iter2
+	   (fun pp v -> 
+	      printf "%s: %s;\n" pp v)
+	   c.properties c.values;
+	 printf "}\n"
+
+       let box_SL: css_class = 
+	  { name = ".box_SL";
+	    properties = 
+	      ["background-color"; 
+	       "border";
+	       "margin"; 
+	       "padding"; 
+	       "-moz-border-radius"; 
+	       "-webkit-border-radius"];
+	    values = 
+	      ["#FFFFCC";
+	       "1px solid #888888";
+	       "10px";
+	       "10px";
+	       "5px 5px 5px 5px";
+	       "5px 5px 5px 5px"]; }
+
+       let box_E: css_class = 
+	  { name = ".box_E";
+	    properties = 
+	      ["width"; 
+	       "margin";];
+	    values = 
+	      ["80%";
+	       "auto";]; }
+
+       let box_D: css_class = 
+	  { name = ".box_D";
+	    properties = 
+	      ["background-color"; 
+	       "border";
+	       "margin"; 
+	       "padding"; 
+	       "-moz-border-radius"; 
+	       "-webkit-border-radius"];
+	    values = 
+	      ["#EEEEEE";
+	       "1px solid #888888";
+	       "10px";
+	       "10px";
+	       "5px 5px 5px 5px";
+	       "5px 5px 5px 5px"]; }
+
+       let box_D_hover: css_class = 
+	  { name = "div.box_D:hover";
+	    properties = 
+	      ["background-color"; 
+	       "border";
+	       "margin"; 
+	       "padding";];
+	    values = 
+	      ["#DDDDDD";
+	       "2px solid #888888";
+	       "10px";
+	       "9px"]; }
+
+       let float_left: css_class = 
+	 { name = ".fl";
+	   properties = ["float"];
+	   values = ["left"]; }
+
+       let clear_left: css_class = 
+	 { name = ".cl";
+	   properties = ["clear"];
+	   values = ["left"]; }
+
+       let print_CSS () =   
+	 printf "<style type=\"text/css\">\n";
+	 print_css_class box_E;
+	 print_css_class box_SL;
+	 print_css_class box_D;
+	 print_css_class box_D_hover;
+	 print_css_class float_left;	
+	 print_css_class clear_left;
+	 printf "</style>\n"
+
+       let print_Script () = 
+	 printf "<script type=\"text/javascript\">\n";
+	 printf "function fold(obj){obj.lastChild.style.display='none';obj.onclick=function(){unfold(obj)};}\n";
+	 printf "function unfold(obj){obj.lastChild.style.display='';obj.onclick=function(){fold(obj)};}\n";
+	 printf "</script>\n"
 
        let print_header () = 
 	 printf "<html>\n<head>\n";
 	 printf "<title>Shape Analyze Results</title>\n";
-	 (* CSS *)
-	 printf "<style type=\"text/css\">\n.box{\nbackground-color: #FFFFCC;";
-	 printf "\nborder: 1px solid #888888;";
-	 printf "\nmargin: 10px;";
-	 printf "\npadding: 10px;";
-	 printf "\n-moz-border-radius : 5px 5px 5px 5px;";
-	 printf "\n-webkit-border-radius : 5px 5px 5px 5px;";
-	 printf "\n}\n.fl{\nfloat: left;";
-	 printf "\n}\n</style>\n";
+	 print_CSS ();
+	 print_Script ();
 	 printf "</head>\n<body>\n";
-	 print_h1 
-	   (Printf.sprintf "Shape Analysis results: %s" c_file)
+	 print_h1 "Shape Analysis results: %s" c_file
 
        let print_footer () =  
 	 printf "\n</body>\n</html>"
-
-       let print_list: ('a -> string) -> string -> 'a list -> unit = fun pp sep l ->
-	 match l with
-	   | [] -> ()
-	   | x::l -> 
-	       printf (pp x);
-	       List.iter
-		 (fun x -> 
-		    printf (sep^(pp x)))
-		 l
 
      end: XML_GEN) 

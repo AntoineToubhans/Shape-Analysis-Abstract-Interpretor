@@ -8,17 +8,16 @@ open Simple_C_syntax
 module type XML_GEN =
   sig
     val xml_file: string
-    val printf: string -> unit
-    val print_h1: string -> unit
-    val print_h2: string -> unit
-    val print_h3: string -> unit
-    val print_bold: string -> unit
-    val print_italic: string -> unit
-    val print_center: string -> unit
+    val printf: ('a, out_channel, unit) format -> 'a
+    val print_h1: ('a, out_channel, unit) format -> 'a
+    val print_h2: ('a, out_channel, unit) format -> 'a
+    val print_h3: ('a, out_channel, unit) format -> 'a
+    val print_bold: ('a, out_channel, unit) format -> 'a
+    val print_italic: ('a, out_channel, unit) format -> 'a
+    val print_center: ('a, out_channel, unit) format -> 'a
     val print_hr: unit -> unit
     val print_header: unit -> unit
     val print_footer: unit -> unit
-    val print_list: ('a -> string) -> string -> 'a list -> unit
   end
 
 module type OPTION = 

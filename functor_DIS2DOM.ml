@@ -31,8 +31,9 @@ module MAKE_DOMAIN =
        let pp: t -> unit = fun t ->
 	 O.XML.print_h2 "ENVIRONMENT:";
 	 StringMap.iter
-	   (fun vn v -> O.XML.printf 
-	      (Printf.sprintf "&%s -------------> %i<br/>\n" vn (IntMap.find v.var_uniqueId t.env)))
+	   (fun vn v -> 
+	      O.XML.printf 
+		"&%s -------------> %i<br/>\n" vn (IntMap.find v.var_uniqueId t.env))
 	   t.var_decls;
 	 O.XML.print_h2 "HEAP:"; 
 	 D.pp t.heap
@@ -201,7 +202,7 @@ module MAKE_DOMAIN =
 	 let print () =  
 	   O.XML.print_hr ();
 	   O.XML.print_h2 "BEFORE:";
-	   O.XML.printf (sc_command2str c); 
+	   O.XML.printf "%s" (sc_command2str c); 
 	   pp t in
 	 match c with
 	   | Assignment a -> 
@@ -228,14 +229,14 @@ module MAKE_DOMAIN =
 
 	       let t_temp = ref { t with heap = D.bottom } 
 	       and t_fp = ref (f_iter { t with heap = D.bottom })
-	       and counter = ref 0 in
+	       and counter = ref 1 in
 
 		 while not (is_include !t_fp !t_temp) do
 		   t_temp := !t_fp;
 		   counter:= 1 + !counter;
 		   if !counter > 8 then
 		     error "can't compute a fixpoint";
-		   O.XML.print_h3 (Printf.sprintf "Looping: %inth iteration" !counter);
+		   O.XML.print_h3 "Looping: %inth iteration" !counter;
 		   t_fp:= f_iter !t_fp; 
 		   if !counter >= 3 then 
 		     t_fp:= widening !t_temp !t_fp;

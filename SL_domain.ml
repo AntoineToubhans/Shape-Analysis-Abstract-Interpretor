@@ -495,9 +495,10 @@ module MAKE_SL_DOMAIN =
 
        let pp: t -> unit = fun (g, p) -> 
 	 O.XML.print_center 
-	   (Printf.sprintf "SL DOMAIN with inductive of kind <b>%s</b>" D.name); 
-	 O.XML.printf "<div class=\"box\">\n";
+	   "SL DOMAIN with inductive of kind <b>%s</b>" D.name; 
+	 O.XML.printf "<div class=\"box_SL\">\n";
 	 P.pp p;
+	 O.XML.printf "</div>\n<div class=\"box_SL\">\n";
 	 G.pp g; 
 	 O.XML.printf "</div>\n"
 
