@@ -32,6 +32,7 @@ ML_FILES=	utils.ml \
 		neq_pred_domain.ml \
 		SL_graph_domain.ml \
 		SL_domain.ml \
+		functor_SLSL2SL.ml \
 		functor_SL2DIS.ml \
 		functor_DIS2DOM.ml \
 		xml_gen.ml \

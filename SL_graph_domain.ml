@@ -469,14 +469,14 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
        IntMap.iter pp_node t.nodes
 
      let clean_node: int -> t -> t = fun i t ->
-       print_debug "SL_GRAPH_DOMAIN: Cleaning node %i\n" i;
+       if debug then print_debug "SL_GRAPH_DOMAIN: Cleaning node %i\n" i;
        if is_node_empty i t then
 	 { t with nodes = IntMap.remove i t.nodes }
        else
 	 t
 
      let clean: t -> t = fun t ->
-       print_debug "SL_GRAPH_DOMAIN: [Cleaning]\n";
+       if debug then print_debug "SL_GRAPH_DOMAIN: [Cleaning]\n";
        { t with nodes = 
 	   IntMap.filter 
 	     (fun _ n -> not (OffsetMap.is_empty n.edges) || n.inductive != None)

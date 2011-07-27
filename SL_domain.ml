@@ -11,9 +11,6 @@ open Inductive_def
 (*                                        Created: AT 06/10/11 *)
 (*                                  Last modified: AT 07/14/11 *)
 
-
-let error(s: string) = failwith (Printf.sprintf "SL_DOMAIN_ERROR: %s" s)
-
 module MAKE_SL_DOMAIN = 
   functor (D: INDUCTIVE_DEF) -> functor (O: OPTION) ->
     (struct
@@ -22,6 +19,30 @@ module MAKE_SL_DOMAIN =
        module G = SL_GRAPH_DOMAIN(O)
        module D = D
 
+       let debug = O.debug
+
+       let name = Printf.sprintf "SL_DOMAIN[%s]" D.name
+
+       let print_debug x = 
+	 Utils.print_debug ("%s:\t" ^^ x) name
+
+       type t = G.t * P.t 
+ 	   
+       let p1: t -> G.t = fun (g, p) -> g
+       let p2: t -> P.t = fun (g, p) -> p
+
+       let prod: ('a -> G.t) -> ('a -> P.t) -> 'a -> t = fun g p a -> (g a, p a)
+
+       let empty: t = G.empty, P.empty
+
+       let clean: t -> t = fun (g, p) ->
+	 if debug then print_debug "[Cleaning]\n";
+	 let g = G.clean g in
+	 let dom = G.domain g in
+	   g, P.clean dom p
+
+       let next: t -> int = fun (g, _) -> G.next g 
+    	
        let position_backward_reseach_in_ind_args: int list = 
 	 (*  D.F(this_node, args, fresh)   *)
 	 (*  contains this_node somewhere  *)
@@ -39,28 +60,9 @@ module MAKE_SL_DOMAIN =
 	     | _::l -> get0 (n+1) l acc in
 	   get0 0 l [] 
 
-      let debug = O.debug
-
-       type t = G.t * P.t
-	   
-       let p1: t -> G.t = fun (g, p) -> g
-       let p2: t -> P.t = fun (g, p) -> p
-
-       let prod: ('a -> G.t) -> ('a -> P.t) -> 'a -> t = fun g p a -> (g a, p a)
-
-       let empty: t = G.empty, P.empty
-
-       let clean: t -> t = fun (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: [Cleaning]\n";
-	 let g = G.clean g in
-	 let dom = G.domain g in
-	   g, P.clean dom p
-
-       let next: t -> int = fun (g, _) -> G.next g 
-    	
        (* WARNING : doesn't check the length, and nullify anyway *)
        let nullify_inductive: int -> t -> t = fun i (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: nullify_inductive %i t\n" i;
+	 if debug then print_debug "nullify_inductive %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
 	   let p = 
@@ -77,14 +79,14 @@ module MAKE_SL_DOMAIN =
 	       error (Printf.sprintf "can not nullify inductive from %i: ill-formed inductive" i)
 		 
        let request_eq: int -> int -> t -> t = fun i j (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: request_eq %i %i t\n" i j;
+	 if debug then print_debug "request_eq %i %i t\n" i j;
 	 if i!=j then
 	   g, P.add_eq i j p
 	 else
 	   g, p
 
        let request_neq: int -> int -> t -> t = fun i j (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: request_neq %i %i t\n" i j;
+	 if debug then print_debug "request_neq %i %i t\n" i j;
 	 g, P.check_bottom (P.add_neq i j p)    
 
        (* checks inductive like:                 *)
@@ -94,7 +96,7 @@ module MAKE_SL_DOMAIN =
        (* for instance: a.dll(0) *= b.dll(0)     *)
        (* could be nullify                       *)
        let check_wrong_inductive: t -> t = fun t ->  
-	 if debug then print_debug "SL_DOMAIN: check wrong inductive\n";
+	 if debug then print_debug "check wrong inductive\n";
 	 if position_backward_reseach_in_ind_args=[] then t 
 	 else 
 	   G.fold
@@ -112,7 +114,7 @@ module MAKE_SL_DOMAIN =
        (* fusion i j t gets t true means i was deleted *)
        (* fusion i j t gets t false means j was deleted*)
        let fusion: int -> int -> t -> t*bool = fun i j (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: fusion %i %i t\n" i j;
+	 if debug then print_debug "fusion %i %i t\n" i j;
 	 if (i==0 && G.has_edges j g)||(j==0 && G.has_edges i g) then raise Bottom;
 	 if P.is_live i p && P.is_live j p && i!=j then raise Bottom; 
 	 let opt_ind_i = G.get_inductive i g and opt_ind_j = G.get_inductive j g
@@ -154,7 +156,7 @@ module MAKE_SL_DOMAIN =
 		  
 	     	     
        let reduce_equalities_one_step: t -> int list -> int list * t option = fun (g, p) l_pt ->
-	 if debug then print_debug "SL_DOMAIN: reduce_equalities_one_step t...\n";
+	 if debug then print_debug "reduce_equalities_one_step t...\n";
 	 let rp = ref p in
 	   match P.pop_equality rp with
 	     | Some (i, j) ->
@@ -163,7 +165,7 @@ module MAKE_SL_DOMAIN =
 	     | None -> l_pt, None
 (*
        let reduce_equalities: t -> t = fun (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: reduce_equalities t...\n";
+	 if debug then print_debug "reduce_equalities t...\n";
 	 let rg = ref g and rp = ref p in
 	 let eq = ref (P.pop_equality rp) in
 	   while has !eq do
@@ -172,7 +174,7 @@ module MAKE_SL_DOMAIN =
 	       rg:= fst t; rp:= snd t;
 	       eq:= P.pop_equality rp
 	   done;
-	   if debug then print_debug "SL_DOMAIN: egalities reduced...\n";
+	   if debug then print_debug "egalities reduced...\n";
 	   !rg, !rp
 *)    
        (* So far, is_bottom checks:               *)
@@ -186,16 +188,16 @@ module MAKE_SL_DOMAIN =
 	     (has opt_ind && Inductive.is_positive (get opt_ind)) 
 	     || List.exists (fun o -> G.has_edge i o g) D.domain_offset in
 	 let b_result = P.is_bottom p || G.for_all check_node g in
-	   if debug && b_result then print_debug "SL_DOMAIN: is t bottom?.....Yes\n"; 
-	   if debug && not b_result then print_debug "SL_DOMAIN: is t bottom?.....No\n";b_result
+	   if debug && b_result then print_debug "is t bottom?.....Yes\n"; 
+	   if debug && not b_result then print_debug "is t bottom?.....No\n";b_result
 
        let create_fresh_node: t -> int * t = fun (g, p) ->
 	 let i, g = G.create_fresh_node g in 
-	   if debug then print_debug "SL_DOMAIN: create_fresh_node...[%i]\n" i; 
+	   if debug then print_debug "create_fresh_node...[%i]\n" i; 
 	   i, (g, p)
 	   
        let malloc: offset list -> t -> int*t = fun ol (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: malloc [%s ]...\n" 
+	 if debug then print_debug "malloc [%s ]...\n" 
 	   (List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol);
 	 let i, g = G.create_fresh_node g in
 	 let g = List.fold_left (fun g o -> G.add_edge i o 0 g) g ol in 
@@ -203,7 +205,7 @@ module MAKE_SL_DOMAIN =
 	   i, (g, p)
 	     
        let var_alloc: int -> offset list -> t -> t = fun i ol (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: var_alloc [%s ]...\n" 
+	 if debug then print_debug "var_alloc [%s ]...\n" 
 	   (List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol);
 	 let g = G.create_fresh_node_index i g in
 	 let g = List.fold_left (fun g o -> G.add_edge i o 0 g) g ol in 
@@ -212,7 +214,7 @@ module MAKE_SL_DOMAIN =
 	   (g, p)
 	     
        let case_inductive_forward: int -> t -> t*t = fun i (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: case_inductive_forward %i t\n" i;
+	 if debug then print_debug "case_inductive_forward %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
 	     if ind.Inductive.length!=Inductive.Unknown then raise No_value;
@@ -235,7 +237,7 @@ module MAKE_SL_DOMAIN =
 	       error (Printf.sprintf "can not break inductive from %i: there's no inductive with no length" i)
 
        let case_inductive_backward: int -> t -> t*t = fun i (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: case_inductive_backward %i t\n" i;
+	 if debug then print_debug "case_inductive_backward %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
 	     if ind.Inductive.length!=Inductive.Unknown then raise No_value;
@@ -258,7 +260,7 @@ module MAKE_SL_DOMAIN =
 	       error (Printf.sprintf "can not break inductive from %i: there's no inductive with no length" i)
 
        let split_inductive_backward: int -> t -> t = fun i (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: split_inductive_backward %i t\n" i;
+	 if debug then print_debug "split_inductive_backward %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
 	   let length = 
@@ -288,7 +290,7 @@ module MAKE_SL_DOMAIN =
        (* raise Split over sequence of unknown length *)
        (* fail if it can not unfold                   *)
        let unfold: int -> t -> t = fun i (g, p) -> 
-	 if debug then print_debug "SL_DOMAIN: try_unfold %i t\n" i;
+	 if debug then print_debug "try_unfold %i t\n" i;
  	 try
 	   let ind = get (G.get_inductive i g) in
 	   let length = 
@@ -315,7 +317,7 @@ module MAKE_SL_DOMAIN =
 	   else 
 	     g, p in
 	   let p = P.add_neq 0 i p in
-	     if debug then print_debug "SL_DOMAIN: unfold successfull at %i t\n" i;
+	     if debug then print_debug "unfold successfull at %i t\n" i;
 	     g, p
 	 with
 	   | No_value ->
@@ -324,7 +326,7 @@ module MAKE_SL_DOMAIN =
 	       error (Printf.sprintf "inductive from %i ill-formed" i)
   
       let search: int -> offset -> t -> int * t = fun i o (g, p) -> 
-	 if debug then print_debug "SL_DOMAIN: search for %i%s\n" i (pp_offset o);
+	 if debug then print_debug "search for %i%s\n" i (pp_offset o);
 	 try get (G.get_edge i o g), (g, p) 
 	 with | No_value ->
 	   if not (List.mem o D.domain_offset) then
@@ -386,7 +388,7 @@ module MAKE_SL_DOMAIN =
 	   end
 
        let mutate: int -> offset -> int -> t -> t = fun i o j (g, p) ->
-	 if debug then print_debug "SL_DOMAIN: mutate [%i%s := %i]\n" i (pp_offset o) j;
+	 if debug then print_debug "mutate [%i%s := %i]\n" i (pp_offset o) j;
 	 try 
 	   G.add_edge i o j (G.remove_edge i o g), p
 	 with
@@ -397,7 +399,7 @@ module MAKE_SL_DOMAIN =
        (*  - Some t   if attempt was successful          *)
        (*  - none   if it can not be fold for any reason *)
        let try_fold: int -> t -> t option = fun i (g, p) -> 
-	 if debug then print_debug "SL_DOMAIN: try to fold at %i t\n" i;
+	 if debug then print_debug "try to fold at %i t\n" i;
 	 try
 	   let pt_parameters = 
 	     List.map (fun o -> get (G.get_edge i o g)) D.def_points_to_parameters
@@ -418,11 +420,11 @@ module MAKE_SL_DOMAIN =
 	       (fun g o -> G.remove_edge i o g) 
 	       g D.def_points_to_fresh in
 	   let g = G.add_inductive i ind g in
-	     if debug then print_debug "SL_DOMAIN: successful folding at node %i\n" i;
+	     if debug then print_debug "successful folding at node %i\n" i;
 	     Some(g, p)
 	 with 
 	   | _ -> 
-	       if debug then print_debug "SL_DOMAIN: fail to fold at node %i\n" i;
+	       if debug then print_debug "fail to fold at node %i\n" i;
 	       None
 
        (* try a modus ponens reduction at node i         *)
@@ -432,7 +434,7 @@ module MAKE_SL_DOMAIN =
        (*  - pred_i_a b = false |                        *)
        let try_modus_ponens: int -> (int -> bool) -> (int list -> bool) -> t -> t option = 
 	 fun i pred pred_ind_args (g, p) -> 
- 	 if debug then print_debug "SL_DOMAIN: try modus ponens at %i t\n" i;
+ 	 if debug then print_debug "try modus ponens at %i t\n" i;
 	 try
 	   let ind0 = get (G.get_inductive i g) in
 	     if pred ind0.Inductive.target 
@@ -457,10 +459,10 @@ module MAKE_SL_DOMAIN =
 		 Some (clean (G.add_inductive i ind g, p))
 	 with 
 	   | Failure s ->  
-	       if debug then print_debug "SL_DOMAIN: failed modus ponens at node %i: %s\n" i s;
+	       if debug then print_debug "failed modus ponens at node %i: %s\n" i s;
 	       None
 	   | _ ->  
-	       if debug then print_debug "SL_DOMAIN: failed modus ponens at node %i\n" i;
+	       if debug then print_debug "failed modus ponens at node %i\n" i;
 	       None
 	 
        (* here we're building a predicate    *)
@@ -475,7 +477,7 @@ module MAKE_SL_DOMAIN =
 	   position_backward_reseach_in_ind_args
 
        let canonicalize: t -> t = fun t -> 
- 	 if debug then print_debug "SL_DOMAIN: CANONICALIZATION\n";
+ 	 if debug then print_debug "CANONICALIZATION\n";
 	 let pred t j i = P.is_live i (snd t) || G.is_reached i (fun k->k!=j) (fst t) in
 	 let nodes = ref (G.domain (fst t)) and rt = ref t in
 	   (* first try to fold at every nodes *)
@@ -493,7 +495,7 @@ module MAKE_SL_DOMAIN =
 	   
 
        let equals: t -> t -> bool = fun (g1, p1) (g2, p2) -> 
-	 if debug then print_debug "SL_DOMAIN: checking [equals]\n";
+	 if debug then print_debug "checking [equals]\n";
 	 let matching_nodes: int IntMap.t = 
 	   List.fold_left 
 	     (fun m i -> IntMap.add i i m)
@@ -503,7 +505,7 @@ module MAKE_SL_DOMAIN =
 	     | Some (m1, m2) -> P.equals m1 m2 p1 p2
 
        let is_include: t -> t -> bool = fun (g1, p1) (g2, p2) -> 
-	 if debug then print_debug "SL_DOMAIN: checking [is_include]\n";
+	 if debug then print_debug "checking [is_include]\n";
 	 let matching_nodes: int IntMap.t = 
 	   List.fold_left 
 	     (fun m i -> IntMap.add i i m)
@@ -515,13 +517,13 @@ module MAKE_SL_DOMAIN =
 	     | Some (m1, m2) -> P.is_include m1 m2 p1 p2
 
        let union: t -> t -> t option = fun t1 t2 ->
-	 if debug then print_debug "SL_DOMAIN: computing [Union]\n";
+	 if debug then print_debug "computing [Union]\n";
 	 if is_include t1 t2 then Some t2 
 	 else if is_include t2 t1 then Some t1
 	 else None
 
        let widening: t -> t -> t option = fun t1 t2 ->
-	 if debug then print_debug "SL_DOMAIN: computing [Widening]\n";
+	 if debug then print_debug "computing [Widening]\n";
 	 let t2 = canonicalize t2 in
 	   if is_include t1 t2 then Some t2 
 	   else if is_include t2 t1 then Some t1
@@ -536,9 +538,10 @@ module MAKE_SL_DOMAIN =
 	 G.pp g; 
 	 O.XML.printf "</div>\n"
 
+       let forget_inductive_length = prod (fun t -> G.forget_inductive_length (p1 t)) p2
 
        let mk x y = 
-	 if debug then print_debug "SL_DOMAIN: MAKE ********test purposes only!\n";
+	 if debug then print_debug "MAKE ********test purposes only!\n";
 	 x, y
 
      end: SL_DOMAIN)

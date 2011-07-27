@@ -65,7 +65,7 @@ let _  =
       failwith "Stopped"
     end;
   O.XML.print_footer ();
-  Unix.system (Printf.sprintf "firefox %s&" O.XML.xml_file);
+  ignore (Unix.system (Printf.sprintf "firefox %s&" O.XML.xml_file));
   Printf.printf "finished...\n" 
 	
 

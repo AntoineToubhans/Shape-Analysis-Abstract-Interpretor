@@ -11,7 +11,7 @@ open Simple_C_syntax
 (* Module DIS_Domain Functor                                   *)
 (* =========================================================== *)
 (*                                        Created: AT 06/23/11 *)
-(*                                  Last modified: AT 06/30/11 *)
+(*                                  Last modified: AT 07/26/11 *)
 
 let error(s: string) = failwith (Printf.sprintf "DIS_DOMAIN_ERROR: %s" s)
 
@@ -461,9 +461,7 @@ module MAKE_DIS_DOMAIN =
 	 match t with
 	   | D_Top -> D_Top
 	   | Disjunction l_t ->
-	       let fil = S.prod 
-		 (fun t -> S.G.forget_inductive_length (S.p1 t)) S.p2 in		 
-		 Disjunction (List.map fil l_t)
+	       Disjunction (List.map S.forget_inductive_length l_t)
 
        let canonicalize: t -> t = fun t ->
       	 if debug then print_debug "DIS_DOMAIN: spec [CANONICALIZE]\n";

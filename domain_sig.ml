@@ -208,19 +208,11 @@ module type INDUCTIVE_DEF =
   end
 
 module type SL_DOMAIN = 
-sig
-    module G: SL_GRAPH_DOMAIN
-    module P: PRED_DOMAIN
-    module D: INDUCTIVE_DEF
-
-    val debug: bool
+  sig
+    val name: string
 
     type t
     val empty: t
-
-    val p1: t -> G.t
-    val p2: t -> P.t
-    val prod: ('a -> G.t) -> ('a -> P.t) -> 'a -> t
 
     val next: t -> int
 
@@ -241,8 +233,8 @@ sig
     val case_inductive_forward: int -> t -> t*t
     val case_inductive_backward: int -> t -> t*t
 
-    val split_inductive_backward: int -> t -> t
-    val unfold: int -> t -> t 
+(*    val split_inductive_backward: int -> t -> t
+    val unfold: int -> t -> t *)
 
     val search: int -> offset -> t -> int * t
     (* mutate a o b t                *)
@@ -250,8 +242,6 @@ sig
     (* which's replaced by:  a@o->b  *)
     val mutate: int -> offset -> int -> t -> t
 
-    val try_fold: int -> t -> t option
-    val try_modus_ponens: int -> (int -> bool) -> (int list -> bool) -> t -> t option
     val canonicalize: t -> t  
 
     val equals: t -> t -> bool
@@ -262,9 +252,9 @@ sig
 
     val pp: t -> unit
 
-    val clean: t -> t
+    val forget_inductive_length: t -> t
     (* test*)
-    val mk: G.t -> P.t -> t
+  (*  val mk: G.t -> P.t -> t*)
   end
 
 module type DIS_DOMAIN = 
