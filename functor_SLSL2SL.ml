@@ -42,9 +42,6 @@ module MAKE_PROD_SL_DOMAIN =
      if debug then print_debug "request_neq %i %i t\n" i j;
      (S.request_neq i j s, T.request_neq i j t)
 
-   let fusion: int -> int -> t -> t*bool = fun i j t -> t, false
-
-
     let reduce_equalities_one_step: t -> int list -> int list *t option = fun t l -> [], None
 
     (* under-approximation of bottom *)
