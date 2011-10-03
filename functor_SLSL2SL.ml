@@ -11,7 +11,9 @@ open Simple_C_syntax
 (* Module SL*SL -> SL_Domain Functor                           *)
 (* =========================================================== *)
 (*                                        Created: AT 07/23/11 *)
-(*                                  Last modified: AT 07/27/11 *)
+(*                                  Last modified: AT 09/27/11 *)
+(* =========================================================== *)
+(*             simple product with no communication for now*** *)
 
 let error(s: string) = failwith (Printf.sprintf "SL_DOMAIN_ERROR: %s" s)
 
@@ -42,7 +44,9 @@ module MAKE_PROD_SL_DOMAIN =
      if debug then print_debug "request_neq %i %i t\n" i j;
      (S.request_neq i j s, T.request_neq i j t)
 
-    let reduce_equalities_one_step: t -> int list -> int list *t option = fun t l -> [], None
+    let reduce_equalities_one_step: t -> int list -> int list *t option = fun t l -> 
+      if debug then print_debug "reduce_equalities_one_step t...\n";
+      [], None
 
     (* under-approximation of bottom *)
     (*      is_bottom t => t=_|_     *)

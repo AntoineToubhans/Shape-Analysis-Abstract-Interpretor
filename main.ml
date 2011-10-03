@@ -20,7 +20,7 @@ and kind_ind = ref ""
 let _ =   
   Arg.parse
     [ "-debug", Arg.Set debug, "\tDebug mode" ;
-      "-a", Arg.Set_string kind_ind, "\tKind of the inductive among the following:\n\t* SL (Singly-linked List)\n\t* TL (Topped List)\n\t* DL (Doubly-linked List)" ]
+      "-a", Arg.Set_string kind_ind, "\tKind of the inductive among the following:\n\t* SL (Singly-linked List)\n\t* TL (Topped List)\n\t* DL (Doubly-linked List)\n\t* TDL (Topped Doubly-linked List)" ]
     (fun s -> f_name := s)  
     "Shape Analyzer by A.Toubhans"
 
@@ -37,33 +37,29 @@ let c: Simple_C_syntax.sc_command =
 	    (Printexc.to_string e);
           failwith "Stopped"
 
-module O = 
-struct
+module O = struct
   let debug = !debug
   let c_file = !f_name      
   module XML = XML_GEN(struct
-		       let c_file = !f_name
-		     end)
+			 let c_file = !f_name
+		       end)
 end
   
-module SL = MAKE_DOMAIN(MAKE_DIS_DOMAIN(MAKE_SL_DOMAIN(SList)(O))(O))(O)
-module TL = MAKE_DOMAIN(MAKE_DIS_DOMAIN(MAKE_SL_DOMAIN(TList)(O))(O))(O)
-module DL = MAKE_DOMAIN(MAKE_DIS_DOMAIN(MAKE_SL_DOMAIN(DLList)(O))(O))(O)
+module I = 
+  (val (try Hashtbl.find selector !kind_ind
+	with | Not_found -> 
+	  Printf.printf "Kind of inductive not available: %s\n" !kind_ind;
+	  failwith "Stopped")
+    : INDUCTIVE_DEF)	
+module SL = MAKE_SL_DOMAIN(I)(O)
+module DIS = MAKE_DIS_DOMAIN(SL)(O)
+module DOM = MAKE_DOMAIN(DIS)(O)
+
 
 let _  =
   O.XML.print_header ();
 (*  O.XML.printf (Simple_C_syntax.sc_command2str c); *)
-  if String.compare !kind_ind "SL" = 0 then
-    ignore (SL.eval_sc_command SL.init c) 
-  else if String.compare !kind_ind "TL" = 0 then
-    ignore (TL.eval_sc_command TL.init c)
-  else if String.compare !kind_ind "DL" = 0 then
-    ignore (DL.eval_sc_command DL.init c)
-  else
-    begin
-      Printf.printf "Kind of inductive not available: %s\n" !kind_ind;
-      failwith "Stopped"
-    end;
+  ignore (DOM.eval_sc_command DOM.init c);
   O.XML.print_footer ();
   ignore (Unix.system (Printf.sprintf "firefox %s&" O.XML.xml_file));
   Printf.printf "finished...\n" 
