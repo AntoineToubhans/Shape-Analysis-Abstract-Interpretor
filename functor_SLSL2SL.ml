@@ -13,9 +13,9 @@ open Simple_C_syntax
 (*                                        Created: AT 07/23/11 *)
 (*                                  Last modified: AT 09/27/11 *)
 (* =========================================================== *)
-(*             simple product with no communication for now*** *)
+(*                simple product with no communication for now *)
 
-let error(s: string) = failwith (Printf.sprintf "SL_DOMAIN_ERROR: %s" s)
+let error(s: string) = failwith (Printf.sprintf "SL_PROD_SL_DOMAIN_ERROR: %s" s)
 
 module MAKE_PROD_SL_DOMAIN =
   functor (S: SL_DOMAIN) -> 
@@ -25,29 +25,77 @@ module MAKE_PROD_SL_DOMAIN =
 
    let debug = O.debug
 
-   let name = Printf.sprintf "SL_PROD_DOMAIN(%s, %s)" S.name T.name
+   let name = Printf.sprintf "SL_PROD_SL_DOMAIN(%s, %s)" S.name T.name
 
    let print_debug x = 
      Utils.print_debug ("%s:\t" ^^ x) name
 
-   type t = S.t * T.t 
+   type v = Left of int | Right of int | P of int*int
 
-   let empty = S.empty, T.empty
+   type t = 
+       { left: S.t;
+	 right: T.t;
+	 link: v IntMap.t; 
+	 next: int;
+       }
 
-   let next: t -> int = fun (s, t) -> max (S.next s) (T.next t)
+   let empty = 
+     { left = S.empty; 
+       right = T.empty; 
+       link = IntMap.singleton 0 (P (0,0)); 
+       next=1; }
 
-   let request_eq: int -> int -> t -> t = fun i j (s, t) -> 
+   let next: t -> int = fun t -> t.next
+
+   let get_left: t -> int -> int option = fun t i ->
+     try
+       match IntMap.find i t.link with
+	 | Left x | P (x, _) -> Some x
+	 | _ -> None
+     with 
+       | Not_found -> None
+	   
+   let get_right: t -> int -> int option = fun t i ->
+     try
+       match IntMap.find i t.link with
+	 | Right x | P (_, x) -> Some x
+	 | _ -> None
+     with 
+       | Not_found -> None
+	   
+   let request_eq: int -> int -> t -> t = fun i j t -> 
      if debug then print_debug "request_eq %i %i t\n" i j;
-     (S.request_eq i j s, T.request_eq i j t)
+     let il = get_left t i and ir = get_right t i 
+     and jl = get_left t j and jr = get_right t j in
+     let left = 
+       match il, jl with
+	 | Some il, Some jl -> S.request_eq il jl t.left
+	 | _ -> t.left
+     and right = 
+       match ir, jr with
+	 | Some ir, Some jr -> T.request_eq ir jr t.right
+	 | _ -> t.right in
+       { left; right; link = t.link; next = t.next; }
 
-   let request_neq: int -> int -> t -> t = fun i j (s, t) ->
+   let request_neq: int -> int -> t -> t = fun i j t -> 
      if debug then print_debug "request_neq %i %i t\n" i j;
-     (S.request_neq i j s, T.request_neq i j t)
+     let il = get_left t i and ir = get_right t i 
+     and jl = get_left t j and jr = get_right t j in
+     let left = 
+       match il, jl with
+	 | Some il, Some jl -> S.request_neq il jl t.left
+	 | _ -> t.left
+     and right = 
+       match ir, jr with
+	 | Some ir, Some jr -> T.request_neq ir jr t.right
+	 | _ -> t.right in
+       { left; right; link = t.link; next = t.next; }
 
-    let reduce_equalities_one_step: t -> int list -> int list *t option = fun t l -> 
+
+    let reduce_equalities_one_step: t -> int list -> int list *t option = fun t l_pt -> 
       if debug then print_debug "reduce_equalities_one_step t...\n";
       [], None
-
+	
     (* under-approximation of bottom *)
     (*      is_bottom t => t=_|_     *)
     let is_bottom: t -> bool = fun t -> false
