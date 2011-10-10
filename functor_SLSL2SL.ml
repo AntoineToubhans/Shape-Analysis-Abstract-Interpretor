@@ -13,7 +13,7 @@ open Simple_C_syntax
 (*                                        Created: AT 07/23/11 *)
 (*                                  Last modified: AT 09/27/11 *)
 (* =========================================================== *)
-(*                simple product with no communication for now *)
+(*                                             simple product  *)
 
 let error(s: string) = failwith (Printf.sprintf "SL_PROD_SL_DOMAIN_ERROR: %s" s)
 
