@@ -229,8 +229,8 @@ module type SL_DOMAIN =
     val malloc: offset list -> t -> int*t
     val var_alloc: int -> offset list -> t -> t
 
-    val case_inductive_forward: int -> t -> t*t
-    val case_inductive_backward: int -> t -> t*t
+    val case_inductive_forward: int -> t -> t list
+    val case_inductive_backward: int -> t -> t list
 
 (*    val split_inductive_backward: int -> t -> t
     val unfold: int -> t -> t *)

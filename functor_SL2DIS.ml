@@ -59,12 +59,16 @@ module MAKE_DIS_DOMAIN =
 	   | Bottom -> [], bottom
 	   | Top -> [], top
 	   | Split(b, i) ->
-	       let t1, t2 = catch_split b i t in
-	       let ll_pt1, lt1 = reduce_equalities l_pt t1 and ll_pt2, lt2 = reduce_equalities l_pt t2 in 
-		 List.append ll_pt1 ll_pt2, disjunction lt1 lt2	   
+	       let lt = catch_split b i t in
+	       let l = List.map (reduce_equalities l_pt) lt in
+		 List.fold_left
+		   (fun (ll_pt_r,lt_r) (ll_pt,lt) -> List.append ll_pt ll_pt_r, disjunction lt lt_r)
+		   ([], bottom) l
+(*	       let ll_pt1, lt1 = reduce_equalities l_pt t1 and ll_pt2, lt2 = reduce_equalities l_pt t2 in 
+		 List.append ll_pt1 ll_pt2, disjunction lt1 lt2	   *)
 
        let rec aux_search = fun t l_io acc_t acc_i -> 
-	 match t with
+	 match t with 
 	   | D_Top -> D_Top, []
 	   | Disjunction [] -> acc_t, acc_i
 	   | Disjunction l_t ->
@@ -82,15 +86,26 @@ module MAKE_DIS_DOMAIN =
 		   | Top -> D_Top, []
 		   | Split (b, k) ->
 		       if debug then print_debug "DIS_DOMAIN: Split(%b, %i) caugth **\n" b k;
-		       let t1, t2 = catch_split b k t in 
+		       let lt = catch_split b k t in 
+		       let l = List.map (reduce_equalities [i]) lt in
+		       let t, l_io = 
+			 List.fold_left
+			   (fun (t_r, l_io_r) (lj, t) -> 
+			      disjunction t t_r, 
+			      List.append (List.map (fun x -> List.hd x, o) lj) l_io_r)
+			   (Disjunction (List.tl l_t), List.tl l_io) l in
+			 aux_search t l_io acc_t acc_i
+			   
+(*		       let t1, t2 = catch_split b k t in 
 		       let lj1, t1 = reduce_equalities [i] t1 and lj2, t2 = reduce_equalities [i] t2 in
+		     
 		       let lj1 = List.map List.hd lj1 and lj2 = List.map List.hd lj2 in
 			 aux_search
 			   (disjunction t1 (disjunction t2 (Disjunction (List.tl l_t))))
 			   (List.append 
 			      (List.map (fun x-> x, o) lj1) 
 			      (List.append (List.map (fun x-> x, o) lj2) (List.tl l_io)))
-			   acc_t acc_i
+			   acc_t acc_i *)
 
 
        let search: t -> (int * offset) list -> t * int list = fun t l_io ->
@@ -122,7 +137,18 @@ module MAKE_DIS_DOMAIN =
 		   | Top -> D_Top, [], []
 		   | Split (b, k) ->
 		       if debug then print_debug "DIS_DOMAIN: Split(%b, %i) caugth **\n" b k;
-		       let t1, t2 = catch_split b k t in 
+		       let lt = catch_split b k t in 
+		       let l = List.map (reduce_equalities (i::l_inv_t)) lt in
+		       let t, l_io, l_inv = 
+			 List.fold_left
+			   (fun (t_r, l_io_r, l_inv_r) (lj, t) -> 
+			      disjunction t t_r, 
+			      List.append (List.map (fun x -> List.hd x, o) lj) l_io_r,
+			      List.append (List.map List.tl lj) l_inv_r)
+			   (Disjunction (List.tl l_t), List.tl l_io, List.tl l_inv) l in
+			 aux_search2 t l_io l_inv acc_t acc_i acc_inv
+
+(*		       let t1, t2 = catch_split b k t in 
 		       let ljinv1, t1 = reduce_equalities (i::l_inv_t) t1 
 		       and ljinv2, t2 = reduce_equalities (i::l_inv_t) t2 in
 		       let lj1 = List.map List.hd ljinv1 
@@ -136,7 +162,7 @@ module MAKE_DIS_DOMAIN =
 			      (List.append (List.map (fun x-> x, o) lj2) (List.tl l_io)))
 			   (List.append ll_inv_t1
 			      (List.append ll_inv_t2 (List.tl l_inv)))
-			   acc_t acc_i acc_inv
+			   acc_t acc_i acc_inv *)
 
        let search2: t -> (int * offset) list -> int list list -> t * int list * int list list = fun t l_io l_inv ->
 	 if debug then print_debug "DIS_DOMAIN: search2 for [ %s] in t....\n"

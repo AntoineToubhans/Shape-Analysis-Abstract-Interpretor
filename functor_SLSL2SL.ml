@@ -105,8 +105,8 @@ module MAKE_PROD_SL_DOMAIN =
     let malloc: offset list -> t -> int*t = fun ol t -> 0, t
     let var_alloc: int -> offset list -> t -> t = fun i ol t -> t
 
-    let case_inductive_forward: int -> t -> t*t = fun i t -> t, t
-    let case_inductive_backward: int -> t -> t*t = fun i t -> t, t
+    let case_inductive_forward: int -> t -> t list = fun i t -> [t]
+    let case_inductive_backward: int -> t -> t list = fun i t -> [t]
 
     let search: int -> offset -> t -> int * t = fun i o t -> 0, t
     (* mutate a o b t                *)

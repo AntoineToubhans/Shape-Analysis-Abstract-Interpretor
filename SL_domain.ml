@@ -213,7 +213,7 @@ module MAKE_SL_DOMAIN =
 	 let p = P.add_live i p in
 	   (g, p)
 	     
-       let case_inductive_forward: int -> t -> t*t = fun i (g, p) ->
+       let case_inductive_forward: int -> t -> t list = fun i (g, p) ->
 	 if debug then print_debug "case_inductive_forward %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
@@ -231,12 +231,12 @@ module MAKE_SL_DOMAIN =
 		 Inductive.target_parameters = ind.Inductive.target_parameters;
 		 length = Inductive.Unknown;} in
 	     let g0 = G.add_inductive j ind1 (G.update_inductive i ind0 g0) in
-	       (g0, p), (nullify_inductive i (g, p))
+	       [g0, p ; nullify_inductive i (g, p)]
 	 with
 	   | No_value -> 
 	       error (Printf.sprintf "can not break inductive from %i: there's no inductive with no length" i)
 
-       let case_inductive_backward: int -> t -> t*t = fun i (g, p) ->
+       let case_inductive_backward: int -> t -> t list = fun i (g, p) ->
 	 if debug then print_debug "case_inductive_backward %i t\n" i;
 	 try
 	   let ind = get (G.get_inductive i g) in
@@ -254,7 +254,7 @@ module MAKE_SL_DOMAIN =
 		 Inductive.target_parameters = ind.Inductive.target_parameters;
 		 Inductive.length = Inductive.Length 1;} in
 	     let g0 = G.add_inductive j ind1 (G.update_inductive i ind0 g0) in
-	       (g0, p), (nullify_inductive i (g, p))
+	       [g0, p ; nullify_inductive i (g, p)]
 	 with
 	   | No_value -> 
 	       error (Printf.sprintf "can not break inductive from %i: there's no inductive with no length" i)
