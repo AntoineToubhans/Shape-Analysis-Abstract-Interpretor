@@ -255,22 +255,88 @@ module MAKE_PROD_SL_DOMAIN =
 	    (* this can't happen if search is called properly *)
 	    error (Printf.sprintf "can search: there's no mapping for %i in the product" i)
 
+    let mutate: int -> offset -> int -> t -> t = fun i o j t -> 
+      if debug then print_debug "mutate [%i%s := %i]\n" i (pp_offset o) j;
+      let il = get_left t i and ir = get_right t i 
+      and jl = get_left t j and jr = get_right t j in
+      let left = 
+	match il, jl with
+	  | None, _ -> raise Top
+	  | Some il, Some jl ->
+	      S.mutate il o jl t.left
+	  | Some il, None ->
+	      let jl, left = S.create_fresh_node t.left in
+		S.mutate il o jl left
+      and right = 
+	match ir, jr with
+	  | None, _ -> raise Top
+	  | Some ir, Some jr ->
+	      T.mutate ir o jr t.right
+	  | Some ir, None ->
+	      let jr, right = T.create_fresh_node t.right in
+		T.mutate ir o jr right in
+	{ left;
+	  right;
+	  link = t.link;
+	  next = t.next; }
 
-    (* mutate a o b t                *)
-    (* t MUST contains       a@o->c  *)
-    (* which's replaced by:  a@o->b  *)
-    let mutate: int -> offset -> int -> t -> t = fun i o j t -> t
+    let canonicalize: t -> t = fun t -> 
+      if debug then print_debug "CANONICALIZATION\n";
+      { left = S.canonicalize t.left;
+	right = T.canonicalize t.right;
+	link = t.link;
+	next = t.next; }
 
-    let canonicalize: t -> t = fun t -> t  
+    let equals: t -> t -> bool =  fun t1 t2 -> 
+      if debug then print_debug "checking [equals]\n";
+      S.equals t1.left t2.left && T.equals t1.right t2.right
 
-    let equals: t -> t -> bool =  fun _ _ -> false
-    let is_include: t -> t -> bool = fun _ _ -> false
+    let is_include: t -> t -> bool = fun t1 t2 -> 
+      if debug then print_debug "checking [is_include]\n";
+      S.is_include t1.left t2.left && T.is_include t1.right t2.right
 
-    let union: t -> t -> t option = fun _ _ -> None
-    let widening: t -> t -> t option = fun _ _ -> None
+    let union: t -> t -> t option = fun t1 t2 ->
+      if debug then print_debug "computing [Union]\n";
+      match S.union t1.left t2.left with
+	| None -> None
+	| Some left -> 
+	    begin
+	      match T.union t1.right t2.right with
+		| None -> None
+		| Some right ->
+		    Some { left;
+			   right;
+			   link = t1.link;
+			   next = t1.next; }
+	    end
 
-    let pp: t -> unit = fun t -> ()
+    let widening: t -> t -> t option = fun t1 t2 ->
+      if debug then print_debug "computing [Widening]\n";
+      match S.widening t1.left t2.left with
+	| None -> None
+	| Some left -> 
+	    begin
+	      match T.widening t1.right t2.right with
+		| None -> None
+		| Some right ->
+		    Some { left;
+			   right;
+			   link = t1.link;
+			   next = t1.next; }
+	    end
 
-    let forget_inductive_length: t -> t = fun t -> t
+    let pp: t -> unit = fun t -> 
+      O.XML.print_center "SL PROD DOMAIN";
+      O.XML.printf "<span>\n";
+      S.pp t.left;
+      O.XML.printf "<span/>\n<span>";
+      T.pp t.right;
+      O.XML.printf "<span/>\n"	
+
+    let forget_inductive_length: t -> t = fun t -> 
+      { left = S.forget_inductive_length t.left;
+	right = T.forget_inductive_length t.right;
+	link = t.link;
+	next = t.next; }
 	   
  end: SL_DOMAIN)
