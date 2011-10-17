@@ -219,7 +219,7 @@ module type SL_DOMAIN =
     val request_eq: int -> int -> t -> t
     val request_neq: int -> int -> t -> t
 
-    val reduce_equalities_one_step: t -> int list -> int list *t option
+    val reduce_equalities_one_step: t -> (int*int*t) option
 
     (* under-approximation of bottom *)
     (*      is_bottom t => t=_|_     *)

@@ -52,9 +52,11 @@ module MAKE_DIS_DOMAIN =
        let rec reduce_equalities: int list -> S.t -> int list list * t = fun l_pt t ->
  	 if debug then print_debug "DIS_DOMAIN: [rec] reduce_equalities \n";
 	 try
-	   match S.reduce_equalities_one_step t l_pt with
-	     | _, None -> [l_pt], Disjunction [t]
-	     | l_pt, Some t -> reduce_equalities l_pt t
+	   match S.reduce_equalities_one_step t with
+	     | None -> [l_pt], Disjunction [t]
+	     | Some(i,j,t) -> 
+		 reduce_equalities 
+		   (List.map (fun k-> if k==i then j else k) l_pt) t
 	 with
 	   | Bottom -> [], bottom
 	   | Top -> [], top
