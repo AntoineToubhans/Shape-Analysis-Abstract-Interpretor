@@ -94,7 +94,7 @@ module MAKE_PROD_SL_DOMAIN =
 
     let reduce_equalities_one_step: t -> int list -> int list *t option = fun t l_pt -> 
       if debug then print_debug "reduce_equalities_one_step t...\n";
-      [], None
+      [], Some t
 	
     (* under-approximation of bottom *)
     (*      is_bottom t => t=_|_     *)
