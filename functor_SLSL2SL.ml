@@ -25,7 +25,7 @@ module MAKE_PROD_SL_DOMAIN =
 
    let debug = O.debug
 
-   let name = Printf.sprintf "SL_PROD_SL_DOMAIN(%s, %s)" S.name T.name
+   let name = Printf.sprintf "SL_PROD_SL_DOMAIN"
 
    let print_debug x = 
      Utils.print_debug ("%s:\t" ^^ x) name
@@ -327,11 +327,11 @@ module MAKE_PROD_SL_DOMAIN =
 
     let pp: t -> unit = fun t -> 
       O.XML.print_center "SL PROD DOMAIN";
-      O.XML.printf "<span>\n";
+      O.XML.printf "<div>\n<span>\n";
       S.pp t.left;
       O.XML.printf "<span/>\n<span>";
       T.pp t.right;
-      O.XML.printf "<span/>\n"	
+      O.XML.printf "<span/>\n</div>\n"	
 
     let forget_inductive_length: t -> t = fun t -> 
       { left = S.forget_inductive_length t.left;

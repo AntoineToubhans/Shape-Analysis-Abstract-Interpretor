@@ -67,15 +67,34 @@ let intlist2str: int list -> string = fun l ->
     | x::l -> 
 	"["^(List.fold_left (fun s a -> Printf.sprintf "%s, %i" s a) (Printf.sprintf "%i" x) l)^"]"
 	  
+type 'a bTree = Empty | Leaf of 'a | Node of 'a bTree * 'a bTree
+  
+let rec bTree_flatten: 'a bTree list -> 'a bTree list = fun l ->
+  match l with
+    | [] -> []
+    | t::[] -> [t]
+    | t1::t2::l -> (Node (t1, t2))::(bTree_flatten l)
 
-(* tests
-let l = [(0,2); (5,14); (5, 14); (0, 2)]
+let list2bTree: 'a list -> 'a bTree = fun l ->
+  let rec f l = 
+    match l with | [] -> Empty | t::[] -> t | _ -> f (bTree_flatten l) in
+    f (List.map (fun a -> Leaf a) l)
 
-let f x y = fst x==fst y && snd x == snd y
 
-let ll = delete_duplicates f l
+let rec pp_blank: int -> unit = fun i ->
+  if i>0 then begin 
+    Printf.printf "-"; 
+    pp_blank (i-1)
+  end
 
-let _ = 
-  List.iter (fun x -> Printf.printf "%i %i\n" (fst x) (snd x)) l;
-  List.iter (fun x -> Printf.printf "%i %i\n" (fst x) (snd x)) ll
-*)
+let rec bTree_pp_r: int -> ('a -> string) -> 'a bTree -> unit = fun i p t ->
+  pp_blank i;
+  match t with
+    | Empty -> Printf.printf "Empty\n" 
+    | Leaf a -> Printf.printf "%s\n" (p a)
+    | Node (a, b) -> 
+	Printf.printf "Prod:\n";
+	bTree_pp_r (i+1) p a;
+	bTree_pp_r (i+1) p b
+
+let bTree_pp: ('a -> string) -> 'a bTree -> unit = fun p t -> bTree_pp_r 0 p t

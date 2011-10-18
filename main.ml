@@ -1,6 +1,7 @@
 open Domain_sig
 open Inductive_def
 open SL_domain
+open Functor_SLSL2SL
 open Functor_SL2DIS
 open Functor_DIS2DOM
 open Xml_gen
@@ -15,12 +16,16 @@ open Xml_gen
 (* Parsing arguments *)
 let f_name = ref "" 
 and debug = ref false 
-and kind_ind = ref "" 
+and list_ind = ref []
   
 let _ =   
   Arg.parse
-    [ "-debug", Arg.Set debug, "\tDebug mode" ;
-      "-a", Arg.Set_string kind_ind, "\tKind of the inductive among the following:\n\t* SL (Singly-linked List)\n\t* TL (Topped List)\n\t* DL (Doubly-linked List)\n\t* TDL (Topped Doubly-linked List)" ]
+    (Arg.align
+       [ "-debug", Arg.Set debug, " Debug mode" ;
+	 "-SL", Arg.Unit (fun () -> list_ind:="SL"::(!list_ind)), "Singly linked list";
+	 "-TL", Arg.Unit (fun () -> list_ind:="TL"::(!list_ind)), "Topped singly linked list";
+	 "-DL", Arg.Unit (fun () -> list_ind:="DL"::(!list_ind)), "Doubly linked list";
+	 "-TDL", Arg.Unit (fun () -> list_ind:="TDL"::(!list_ind)), "Topped doubly linked list" ])
     (fun s -> f_name := s)  
     "Shape Analyzer by A.Toubhans"
 
@@ -44,14 +49,24 @@ module O = struct
 			 let c_file = !f_name
 		       end)
 end
-  
-module I = 
-  (val (try Hashtbl.find selector !kind_ind
-	with | Not_found -> 
-	  Printf.printf "Kind of inductive not available: %s\n" !kind_ind;
-	  failwith "Stopped")
-    : INDUCTIVE_DEF)	
-module SL = MAKE_SL_DOMAIN(I)(O)
+
+let rec build_SL: string Utils.bTree -> (module SL_DOMAIN) = function
+  | Utils.Empty -> 
+      Printf.printf "No inductive given!\n";
+      failwith "Stopped"
+  | Utils.Leaf ind ->
+      let module I = 
+	( val (Hashtbl.find selector ind): INDUCTIVE_DEF ) in
+	( module MAKE_SL_DOMAIN(I)(O): SL_DOMAIN )
+  | Utils.Node (a, b) -> 
+      let module S = 
+	( val ( build_SL a ): SL_DOMAIN ) in
+      let module T = 
+	( val ( build_SL b ): SL_DOMAIN ) in
+	( module MAKE_PROD_SL_DOMAIN(S)(T)(O): SL_DOMAIN )
+	
+
+module SL = ( val ( build_SL ( Utils.list2bTree !list_ind ) ): SL_DOMAIN) 
 module DIS = MAKE_DIS_DOMAIN(SL)(O)
 module DOM = MAKE_DOMAIN(DIS)(O)
 
