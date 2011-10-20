@@ -58,16 +58,14 @@ let delete_duplicates: ('a -> 'a -> bool) -> 'a list -> 'a list = fun c l ->
       | x::l, y::ll -> aux c l (if c x y then cur else x::cur) in
   aux c l []
 
-let injectionNSquare2N: (int * int) -> int = fun (x, y) ->
-  x*x+y*y+2*x*y+x+3*y
-
+(*
 let intlist2str: int list -> string = fun l ->
   match l with
     | [] -> "[]" 
     | x::l -> 
-	"["^(List.fold_left (fun s a -> Printf.sprintf "%s, %i" s a) (Printf.sprintf "%i" x) l)^"]"
+	"["^(List.fold_left (fun s a -> Printf.sprintf "%s, %i" s a) (Printf.sprintf "%i" x) l)^"]" *)
 	  
-type 'a bTree = Empty | Leaf of 'a | Node of 'a bTree * 'a bTree
+type 'a bTree = Empty | Leaf of 'a | Node of 'a bTree * 'a bTree 
   
 let rec bTree_flatten: 'a bTree list -> 'a bTree list = fun l ->
   match l with
@@ -98,3 +96,52 @@ let rec bTree_pp_r: int -> ('a -> string) -> 'a bTree -> unit = fun i p t ->
 	bTree_pp_r (i+1) p b
 
 let bTree_pp: ('a -> string) -> 'a bTree -> unit = fun p t -> bTree_pp_r 0 p t
+
+module Node_ID = 
+  struct
+    type t =
+	Id of int
+      | Left of t
+      | Right of t
+      | P of t * t
+	  
+    let get: t -> int = function 
+      | Id x -> x
+      | _ -> failwith "can't get the node ID"
+	  
+    let left: t -> t option = function
+      | Left x | P (x, _) -> Some x
+      | _ -> None
+    let right: t -> t option = function
+      | Right x | P (_, x) -> Some x
+      | _ -> None
+
+    let rec fusion: t -> t -> t -> t = fun i j k -> 
+      match i, j, k with
+	| Left i, Left j, Left k -> Left (fusion i j k)
+	| Left i, Left j, P (k, r) -> P (fusion i j k, r)
+	| Right i, Right j, Right k -> Right (fusion i j k)
+	| Right i, Right j, P (l, k) -> P (l, fusion i j k)
+	| Id i, Id j, Id k -> Id (if i=k then j else k)
+	| _ -> failwith "Node_ID.fusion error"
+
+    let rec max: t -> t -> t = fun t1 t2 ->
+      match t1, t2 with
+	| Id x, Id y -> Id (Pervasives.max x y)
+	| Id _, t | t, Id _ -> t
+	| P (t11, t12), P (t21, t22) -> P (max t11 t21, max t12 t22)
+	| Left t, P (t2, t3) | P (t2, t3), Left t -> P (max t t2, t3)
+	| Right t, P (t2, t3) | P (t2, t3), Right t -> P (t2, max t t3)
+	| Left t1, Right t2 | Right t2, Left t1 -> P (t1, t2)
+	| Right t1, Right t2 -> Right (max t1 t2)
+	| Left t1, Left t2 -> Left (max t1 t2)
+
+    let rec pp: t -> string = function 
+      | Id x -> Printf.sprintf "Id %i" x
+      | Left t -> Printf.sprintf "Left (%s)" (pp t)
+      | Right t -> Printf.sprintf "Right (%s)" (pp t)
+      | P (t1, t2) -> Printf.sprintf "P (%s, %s)" (pp t1) (pp t2)
+
+  end
+
+

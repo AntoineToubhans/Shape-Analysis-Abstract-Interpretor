@@ -21,6 +21,9 @@ module MAKE_DIS_DOMAIN =
 
        let debug = O.debug
 
+       let print_debug x = 
+	 Utils.print_debug ("DIS_DOMAIN:\t" ^^ x) 
+
        type t = 
 	 | Disjunction of S.t list
 	 | D_Top
@@ -46,28 +49,27 @@ module MAKE_DIS_DOMAIN =
 	   | Disjunction lt, Disjunction lu -> Disjunction (List.append lt lu)
 
        let catch_split b i t = 
+	 if debug then print_debug "Split(%b, %s) caugth **\n" b (Node_ID.pp i);
 	 if b then S.case_inductive_forward i t else S.case_inductive_backward i t
 
        (* reduce_equalities i t ---> [i1;...;in], t1/\.../\tn *)
-       let rec reduce_equalities: int list -> S.t -> int list list * t = fun l_pt t ->
- 	 if debug then print_debug "DIS_DOMAIN: [rec] reduce_equalities \n";
+       let rec reduce_equalities: Node_ID.t list -> S.t -> Node_ID.t list list * t = fun l_pt t ->
+ 	 if debug then print_debug "[rec] reduce_equalities \n";
 	 try
 	   match S.reduce_equalities_one_step t with
 	     | None -> [l_pt], Disjunction [t]
 	     | Some(i,j,t) -> 
 		 reduce_equalities 
-		   (List.map (fun k-> if k==i then j else k) l_pt) t
+		   (List.map (Node_ID.fusion i j) l_pt) t
 	 with
-	   | Bottom -> [], bottom
-	   | Top -> [], top
+	   | Bottom -> if debug then print_debug "Bottom caugth **\n"; [], bottom
+	   | Top -> if debug then print_debug "Top caugth **\n"; [], top
 	   | Split(b, i) ->
 	       let lt = catch_split b i t in
 	       let l = List.map (reduce_equalities l_pt) lt in
 		 List.fold_left
 		   (fun (ll_pt_r,lt_r) (ll_pt,lt) -> List.append ll_pt ll_pt_r, disjunction lt lt_r)
 		   ([], bottom) l
-(*	       let ll_pt1, lt1 = reduce_equalities l_pt t1 and ll_pt2, lt2 = reduce_equalities l_pt t2 in 
-		 List.append ll_pt1 ll_pt2, disjunction lt1 lt2	   *)
 
        let rec aux_search = fun t l_io acc_t acc_i -> 
 	 match t with 
@@ -85,9 +87,8 @@ module MAKE_DIS_DOMAIN =
 		       (disjunction t acc_t) 
 		       (List.append lj acc_i)  
 		 with
-		   | Top -> D_Top, []
+		   | Top -> if debug then print_debug "Top caugth **\n"; D_Top, []
 		   | Split (b, k) ->
-		       if debug then print_debug "DIS_DOMAIN: Split(%b, %i) caugth **\n" b k;
 		       let lt = catch_split b k t in 
 		       let l = List.map (reduce_equalities [i]) lt in
 		       let t, l_io = 
@@ -99,12 +100,12 @@ module MAKE_DIS_DOMAIN =
 			 aux_search t l_io acc_t acc_i
 			   
 
-       let search: t -> (int * offset) list -> t * int list = fun t l_io ->
-	 if debug then print_debug "DIS_DOMAIN: search for [ %s] in t....\n"
-	   (List.fold_left (fun s (i, o)-> Printf.sprintf "%s%i%s " s i (pp_offset o)) "" l_io);
+       let search: t -> (Node_ID.t * offset) list -> t * Node_ID.t list = fun t l_io ->
+	 if debug then print_debug "search for [ %s] in t....\n"
+	   (List.fold_left (fun s (i, o)-> Printf.sprintf "%s%s%s " s (Node_ID.pp i) (pp_offset o)) "" l_io);
 	 let t, l_i = aux_search t l_io bottom [] in
-	   if debug then print_debug "DIS_DOMAIN: found [ %s]\n"
-	     (List.fold_left (fun s i-> Printf.sprintf "%s%i " s i) "" l_i);
+	   if debug then print_debug "found [ %s]\n"
+	     (List.fold_left (fun s i-> Printf.sprintf "%s%s " s (Node_ID.pp i)) "" l_i);
 	   t, l_i
 
        let rec aux_search2 = fun t l_io l_inv acc_t acc_i acc_inv -> 
@@ -125,9 +126,8 @@ module MAKE_DIS_DOMAIN =
 		       (List.append lj acc_i)  
 		       (List.append ll_inv_t acc_inv)
 		 with
-		   | Top -> D_Top, [], []
+		   | Top -> if debug then print_debug "Top caugth **\n"; D_Top, [], []
 		   | Split (b, k) ->
-		       if debug then print_debug "DIS_DOMAIN: Split(%b, %i) caugth **\n" b k;
 		       let lt = catch_split b k t in 
 		       let l = List.map (reduce_equalities (i::l_inv_t)) lt in
 		       let t, l_io, l_inv = 
@@ -139,16 +139,17 @@ module MAKE_DIS_DOMAIN =
 			   (Disjunction (List.tl l_t), List.tl l_io, List.tl l_inv) l in
 			 aux_search2 t l_io l_inv acc_t acc_i acc_inv
 
-       let search2: t -> (int*offset) list -> int list list -> t*int list*int list list = fun t l_io l_inv ->
-	 if debug then print_debug "DIS_DOMAIN: search2 for [ %s] in t....\n"
-	   (List.fold_left (fun s (i, o)-> Printf.sprintf "%s%i%s " s i (pp_offset o)) "" l_io);
-	 let t, l_i, l_inv = aux_search2 t l_io l_inv bottom [] [] in
-	   if debug then print_debug "DIS_DOMAIN: (s2) found [ %s]\n"
-	     (List.fold_left (fun s i-> Printf.sprintf "%s%i " s i) "" l_i);
-	   t, l_i, l_inv
-
+       let search2: t -> (Node_ID.t * offset) list -> Node_ID.t list list -> 
+	 t * Node_ID.t list * Node_ID.t list list = fun t l_io l_inv ->
+	   if debug then print_debug "search2 for [ %s] in t....\n"
+	     (List.fold_left (fun s (i, o)-> Printf.sprintf "%s%s%s " s (Node_ID.pp i) (pp_offset o)) "" l_io);
+	   let t, l_i, l_inv = aux_search2 t l_io l_inv bottom [] [] in
+	     if debug then print_debug "(s2) found [ %s]\n"
+	       (List.fold_left (fun s i-> Printf.sprintf "%s%s " s (Node_ID.pp i)) "" l_i);
+	     t, l_i, l_inv
+	       
        let union: t -> t -> t = fun t1 t2 ->
-	 if debug then print_debug "DIS_DOMAIN: computing [Union]\n";
+	 if debug then print_debug "computing [Union]\n";
 	 match t1, t2 with
 	   | D_Top, _ | _, D_Top -> D_Top
 	   | Disjunction l_t1, Disjunction l_t2 -> 
@@ -175,7 +176,7 @@ module MAKE_DIS_DOMAIN =
        (* Widening from canonicalization:         *)
        (*  Widening(a, b):= Union(can(a), can(b)) *)
        let widening: t -> t -> t = fun t1 t2 ->
-	 if debug then print_debug "DIS_DOMAIN: computing [Widening]\n";
+	 if debug then print_debug "computing [Widening]\n";
 	 match t1, t2 with
 	   | D_Top, _ | _, D_Top -> D_Top
 	   | Disjunction l_t1, Disjunction l_t2 -> 
@@ -198,7 +199,7 @@ module MAKE_DIS_DOMAIN =
 
        (* sound, but can be easely improved ... *)
        let is_include: t -> t -> bool = fun t1 t2 ->	 
-	 if debug then print_debug "DIS_DOMAIN: checking [inclusion]\n";
+	 if debug then print_debug "checking [inclusion]\n";
 	 match t1, t2 with
 	   | _, D_Top -> 
 	       true
@@ -210,16 +211,19 @@ module MAKE_DIS_DOMAIN =
 		      (fun t2 -> S.is_include t1 t2) l_t2) 
 		 l_t1
 
-       let var_alloc: offset list -> t -> t* int = fun l_o t -> 
+       let var_alloc: offset list -> t -> t* Node_ID.t = fun l_o t -> 
+	 if debug then print_debug "var_alloc [%s ]...\n" 
+	   (List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" l_o);
 	 match t with
-	   | D_Top -> D_Top, 0
+	   | D_Top -> D_Top, Node_ID.Id 0
 	   | Disjunction l_t ->
-	       let i = List.fold_left (fun n tt -> max n (S.next tt)) 0 l_t in
-	       let t = Disjunction (List.map (fun tt -> S.var_alloc i l_o tt) l_t) in
-		 t, i
+	       let i = List.fold_left (fun n tt -> Node_ID.max n (S.next tt)) (Node_ID.Id 0) l_t in
+		 if debug then print_debug "[var_alloc] mem found: %s\n" (Node_ID.pp i);
+		 let t = Disjunction (List.map (fun tt -> S.var_alloc i l_o tt) l_t) in
+		   t, i
 
-       let rec get_sc_hvalue: sc_hvalue -> int -> t -> t * int list * offset = fun e i t ->
-	 if debug then print_debug "DIS_DOMAIN: [rec] get_sc_hvalue %s\n" (sc_hvalue2str e);
+       let rec get_sc_hvalue: sc_hvalue -> Node_ID.t -> t -> t * Node_ID.t list * offset = fun e i t ->
+	 if debug then print_debug "[rec] get_sc_hvalue %s\n" (sc_hvalue2str e);
 	 let t, l_i, o = 
 	   match e with
 	     | Var _ -> 
@@ -238,13 +242,13 @@ module MAKE_DIS_DOMAIN =
 		 let t, l_i, o = get_sc_hvalue e i t in
 		 let t, l_i = search t (List.map (fun i->i, o) l_i) in
 		   t, l_i, Zero in
-	   if debug then print_debug "DIS_DOMAIN: found sc_hvalue %s [ %s]%s\n" (sc_hvalue2str e)
-	     (List.fold_left (fun s i->Printf.sprintf "%s%i " s i) "" l_i) (pp_offset o);
+	   if debug then print_debug "found sc_hvalue %s [ %s]%s\n" (sc_hvalue2str e)
+	     (List.fold_left (fun s i->Printf.sprintf "%s%s " s (Node_ID.pp i)) "" l_i) (pp_offset o);
 	   t, l_i, o
 	
-       let rec get_sc_hvalue2: sc_hvalue -> int -> t -> int list list -> t * int list * offset * int list list = 
-	 fun e i t l_inv ->
-	   if debug then print_debug "DIS_DOMAIN: [rec] get_sc_hvalue2 %s\n" (sc_hvalue2str e);
+       let rec get_sc_hvalue2: sc_hvalue -> Node_ID.t -> t -> Node_ID.t list list -> 
+	 t * Node_ID.t list * offset * Node_ID.t list list = fun e i t l_inv ->
+	   if debug then print_debug "[rec] get_sc_hvalue2 %s\n" (sc_hvalue2str e);
 	   let t, l_i, o, l_inv = 
 	     match e with
 	       | Var _ -> 
@@ -263,12 +267,12 @@ module MAKE_DIS_DOMAIN =
 		   let t, l_i, o, l_inv = get_sc_hvalue2 e i t l_inv in
 		   let t, l_i, l_inv = search2 t (List.map (fun i->i, o) l_i) l_inv in
 		     t, l_i, Zero, l_inv in
-	     if debug then print_debug "DIS_DOMAIN: found sc_hvalue2 %s [ %s]%s\n" (sc_hvalue2str e)
-	       (List.fold_left (fun s i->Printf.sprintf "%s%i " s i) "" l_i) (pp_offset o);
+	     if debug then print_debug "found sc_hvalue2 %s [ %s]%s\n" (sc_hvalue2str e)
+	       (List.fold_left (fun s i->Printf.sprintf "%s%s " s (Node_ID.pp i)) "" l_i) (pp_offset o);
 	     t, l_i, o, l_inv
 	
-       let get_sc_vvalue: sc_vvalue -> int -> offset list -> t -> t * int list = fun e i l_o_malloc t ->
-	 if debug then print_debug "DIS_DOMAIN: get_sc_vvalue %s\n" (sc_vvalue2str e);
+       let get_sc_vvalue: sc_vvalue -> Node_ID.t -> offset list -> t -> t * Node_ID.t list = fun e i l_o_malloc t ->
+	 if debug then print_debug "get_sc_vvalue %s\n" (sc_vvalue2str e);
 	 let t, l_i = 
 	   match t, e with
 	     | D_Top, _ -> 
@@ -277,7 +281,7 @@ module MAKE_DIS_DOMAIN =
 		 let l_i, l_t = List.split (List.map (fun t -> S.create_fresh_node t) l_t) in
 		   Disjunction l_t, l_i
 	     | Disjunction l_t, Null ->
-		 t, List.map (fun _->0) l_t
+		 t, List.map S.zero l_t
 	     | Disjunction l_t, Malloc _ ->
 		 let l_i, l_t = List.split (List.map (fun t -> S.malloc l_o_malloc t) l_t) in
 		   Disjunction l_t, l_i
@@ -287,13 +291,13 @@ module MAKE_DIS_DOMAIN =
 		     t, l_i  
 		   else (* feature not suported: &x->n *)
 		     top, [] in
-	   if debug then print_debug "DIS_DOMAIN: found sc_vvalue %s [ %s]\n" (sc_vvalue2str e)
-	     (List.fold_left (fun s i->Printf.sprintf "%s%i " s i) "" l_i);
+	   if debug then print_debug "found sc_vvalue %s [ %s]\n" (sc_vvalue2str e)
+	     (List.fold_left (fun s i->Printf.sprintf "%s%s " s (Node_ID.pp i)) "" l_i);
 	   t, l_i
 		
-       let mutation: offset list -> offset list -> int -> int -> sc_assignment -> t -> t = 
+       let mutation: offset list -> offset list -> Node_ID.t -> Node_ID.t -> sc_assignment -> t -> t = 
 	 fun l_offset_mut l_o_malloc i j (la, ra) t -> 
-	   if debug then print_debug "DIS_DOMAIN: mutation %s\n" (sc_assignment2str (la, ra));	 
+	   if debug then print_debug "mutation %s\n" (sc_assignment2str (la, ra));	 
 	   (* first we take care of rigth hande side of the assignment 
 	      and get the nodes which will be copied *)
 	   let t, in_mut = 
@@ -334,11 +338,8 @@ module MAKE_DIS_DOMAIN =
 			     t l_offset_mut l)
 			l_t l_i in_mut)		
       
-       let aux_filter: (int list * int list) list -> t -> t*t = fun l t -> 
-	 if debug then print_debug "DIS_DOMAIN: perform filtering....[%s]\n"
-	   (List.fold_left 
-	      (fun s (l1, l2) -> Printf.sprintf "%s%s=%s, " s (intlist2str l1) (intlist2str l2)) 
-	      "" l);
+       let aux_filter: (Node_ID.t list * Node_ID.t list) list -> t -> t * t = fun l t -> 
+	 if debug then print_debug "perform filtering...\n";
 	 match t with
 	   | D_Top -> top, top 
 	   | Disjunction l_t ->
@@ -358,8 +359,8 @@ module MAKE_DIS_DOMAIN =
 		 (bottom, bottom) l_t l
 
 
-       let filter: offset list -> int -> int -> sc_cond -> t -> t*t = fun l_o i j cond t -> 
-	 if debug then print_debug "DIS_DOMAIN: filter %s\n" (sc_cond2str cond);	 
+       let filter: offset list -> Node_ID.t -> Node_ID.t -> sc_cond -> t -> t * t = fun l_o i j cond t -> 
+	 if debug then print_debug "filter %s\n" (sc_cond2str cond);	 
 	 let  b, e1, e2 = 
 	   match cond with
 	     | Eq(e1, e2) -> true, e1, e2
@@ -396,7 +397,10 @@ module MAKE_DIS_DOMAIN =
 		     | Null -> 
 			 let t, l_i, o = get_sc_hvalue e1 i t in
 			 let t, l_i = search t (List.map (fun i->i, o) l_i) in
-			 let l = List.map (fun i-> [0], [i]) l_i in
+			 let l = match t with
+			   | D_Top -> []
+			   | Disjunction l_t ->
+			       List.map2 (fun t i-> [S.zero t], [i]) l_t l_i in
 			   aux_filter l t
 		     | Address e2 ->
 			 let t, l_i, oi = get_sc_hvalue e1 i t in
@@ -458,14 +462,14 @@ module MAKE_DIS_DOMAIN =
 
        (**************** spec functions *********************)
        let forget_inductive_length: t -> t = fun t -> 
-      	 if debug then print_debug "DIS_DOMAIN: spec [FORGET INDUCTIVE LENGTH]\n";
+      	 if debug then print_debug "spec [FORGET INDUCTIVE LENGTH]\n";
 	 match t with
 	   | D_Top -> D_Top
 	   | Disjunction l_t ->
 	       Disjunction (List.map S.forget_inductive_length l_t)
 
        let canonicalize: t -> t = fun t ->
-      	 if debug then print_debug "DIS_DOMAIN: spec [CANONICALIZE]\n";
+      	 if debug then print_debug "spec [CANONICALIZE]\n";
 	 match t with
 	   | D_Top -> D_Top
 	   | Disjunction l_t ->

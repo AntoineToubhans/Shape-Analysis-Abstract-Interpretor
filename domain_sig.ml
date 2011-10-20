@@ -84,7 +84,7 @@ module Inductive =
 (* i ===_===> j                  *)
 (*      -> fusion i j            *)
 (*      -> i===_===> k===1===> j *)
-exception Split of bool*int
+exception Split of bool * Node_ID.t
      
 module type SL_GRAPH_DOMAIN =
   sig      
@@ -214,32 +214,33 @@ module type SL_DOMAIN =
     type t
     val empty: t
 
-    val next: t -> int
+    val next: t -> Node_ID.t
+    val zero: t -> Node_ID.t
 
-    val request_eq: int -> int -> t -> t
-    val request_neq: int -> int -> t -> t
+    val request_eq: Node_ID.t -> Node_ID.t -> t -> t
+    val request_neq: Node_ID.t -> Node_ID.t -> t -> t
 
-    val reduce_equalities_one_step: t -> (int*int*t) option
+    val reduce_equalities_one_step: t -> (Node_ID.t*Node_ID.t*t) option
 
     (* under-approximation of bottom *)
     (*      is_bottom t => t=_|_     *)
     val is_bottom: t -> bool
 
-    val create_fresh_node: t -> int * t
-    val malloc: offset list -> t -> int*t
-    val var_alloc: int -> offset list -> t -> t
+    val create_fresh_node: t -> Node_ID.t * t
+    val malloc: offset list -> t -> Node_ID.t*t
+    val var_alloc: Node_ID.t -> offset list -> t -> t
 
-    val case_inductive_forward: int -> t -> t list
-    val case_inductive_backward: int -> t -> t list
+    val case_inductive_forward: Node_ID.t -> t -> t list
+    val case_inductive_backward: Node_ID.t -> t -> t list
 
-(*    val split_inductive_backward: int -> t -> t
-    val unfold: int -> t -> t *)
+(*    val split_inductive_backward: Node_ID.t -> t -> t
+    val unfold: Node_ID.t -> t -> t *)
 
-    val search: int -> offset -> t -> int * t
+    val search: Node_ID.t -> offset -> t -> Node_ID.t * t
     (* mutate a o b t                *)
     (* t MUST contains       a@o->c  *)
     (* which's replaced by:  a@o->b  *)
-    val mutate: int -> offset -> int -> t -> t
+    val mutate: Node_ID.t -> offset -> Node_ID.t -> t -> t
 
     val canonicalize: t -> t  
 
@@ -272,12 +273,11 @@ module type DIS_DOMAIN =
     val widening: t -> t -> t
     val is_include: t -> t -> bool
 
-    val var_alloc: offset list -> t -> t* int
+    val var_alloc: offset list -> t -> t * Node_ID.t
     
     (* mut [o1, ..on] &x &y assign *)
-    val mutation: offset list -> offset list -> int -> int -> sc_assignment -> t -> t 
-      
-    val filter: offset list -> int -> int -> sc_cond -> t -> t*t
+    val mutation: offset list -> offset list -> Node_ID.t -> Node_ID.t -> sc_assignment -> t -> t 
+    val filter: offset list -> Node_ID.t -> Node_ID.t -> sc_cond -> t -> t*t
 
     val pp: t -> unit
 

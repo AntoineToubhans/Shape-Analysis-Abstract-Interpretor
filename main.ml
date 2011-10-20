@@ -76,7 +76,7 @@ let _  =
 (*  O.XML.printf (Simple_C_syntax.sc_command2str c); *)
   ignore (DOM.eval_sc_command DOM.init c);
   O.XML.print_footer ();
-  ignore (Unix.system (Printf.sprintf "firefox %s&" O.XML.xml_file));
+(*  ignore (Unix.system (Printf.sprintf "firefox %s&" O.XML.xml_file)); *)
   Printf.printf "finished...\n" 
 	
 

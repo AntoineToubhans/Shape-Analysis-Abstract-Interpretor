@@ -132,6 +132,11 @@ module XML_GEN =
 	   properties = ["clear"];
 	   values = ["left"]; }
 
+       let display_inline: css_class = 
+	 { name = ".dp_i";
+	   properties = ["display"];
+	   values = ["inline-block"]; }
+
        let print_CSS () =   
 	 printf "<style type=\"text/css\">\n";
 	 print_css_class box_E;
@@ -140,6 +145,7 @@ module XML_GEN =
 	 print_css_class box_D_hover;
 	 print_css_class float_left;	
 	 print_css_class clear_left;
+	 print_css_class display_inline;
 	 printf "</style>\n"
 
        let print_Script () = 

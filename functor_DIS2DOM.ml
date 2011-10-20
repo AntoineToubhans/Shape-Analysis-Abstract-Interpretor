@@ -23,7 +23,7 @@ module MAKE_DOMAIN =
        let debug = O.debug 
 
        type t = 
-	   { env: int IntMap.t;
+	   { env: Node_ID.t IntMap.t;
 	     heap: D.t;
 	     var_decls: sc_var StringMap.t;
 	     struct_decls: sc_struct_decl StringMap.t}
@@ -33,7 +33,7 @@ module MAKE_DOMAIN =
 	 StringMap.iter
 	   (fun vn v -> 
 	      O.XML.printf 
-		"&%s -------------> %i<br/>\n" vn (IntMap.find v.var_uniqueId t.env))
+		"&%s -------------> %s<br/>\n" vn (Node_ID.pp (IntMap.find v.var_uniqueId t.env)))
 	   t.var_decls;
 	 O.XML.print_h2 "HEAP:"; 
 	 D.pp t.heap
@@ -117,7 +117,7 @@ module MAKE_DOMAIN =
 	   | Array _ -> 
 	       error "array: feature not supported yet"
 
-       let rec get_entry_point_hv: sc_hvalue -> t -> int = fun e t ->
+       let rec get_entry_point_hv: sc_hvalue -> t -> Node_ID.t = fun e t ->
 	 if debug then print_debug "DOMAIN: [rec] get entry_point of sc_hvalue %s \n" (sc_hvalue2str e);
 	 match e with
 	   | ArrayAccess (_, e) | FieldAccess(_, e) | Deref e ->
@@ -125,13 +125,13 @@ module MAKE_DOMAIN =
 	   | Var x -> 
 	       IntMap.find (StringMap.find x t.var_decls).var_uniqueId t.env
 
-       let get_entry_point_vv: sc_vvalue -> t -> int = fun e t ->
+       let get_entry_point_vv: sc_vvalue -> t -> Node_ID.t = fun e t ->
 	 if debug then print_debug "DOMAIN: get entry_point of sc_vvalue %s \n" (sc_vvalue2str e);
 	 match e with
 	   | Address e -> get_entry_point_hv e t
-	   | _ -> 0 (* useless in those particular cases *)
+	   | _ -> Node_ID.Id 0 (* useless in those particular cases *)
 
-       let get_entry_point: sc_exp -> t -> int = fun e t -> 
+       let get_entry_point: sc_exp -> t -> Node_ID.t = fun e t -> 
 	 if debug then print_debug "DOMAIN: get entry_point of sc_exp %s \n" (sc_exp2str e);
 	 match e with
 	   | HValue e -> get_entry_point_hv e t

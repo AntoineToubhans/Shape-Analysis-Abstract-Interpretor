@@ -9,11 +9,11 @@ open Inductive_def
 (* Module SL_Domain                                            *)
 (* =========================================================== *)
 (*                                        Created: AT 06/10/11 *)
-(*                                  Last modified: AT 07/14/11 *)
+(*                                  Last modified: AT 10/19/11 *)
 
-module MAKE_SL_DOMAIN = 
+module MAKE_SL_LEAF_DOMAIN = 
   functor (D: INDUCTIVE_DEF) -> functor (O: OPTION) ->
-    (struct
+    struct
        
        module P = NEQ_DOMAIN(O)
        module G = SL_GRAPH_DOMAIN(O)
@@ -42,6 +42,7 @@ module MAKE_SL_DOMAIN =
 	   g, P.clean dom p
 
        let next: t -> int = fun (g, _) -> G.next g 
+       let zero: t -> int = fun _ -> 0
     	
        let position_backward_reseach_in_ind_args: int list = 
 	 (*  D.F(this_node, args, fresh)   *)
@@ -142,7 +143,7 @@ module MAKE_SL_DOMAIN =
 		   else if ind_j.Inductive.target == i then 
 		     (* j ==> i ==> k  can be handled directly *)
 		     let g, p = nullify_inductive j (g, p) in do_fusion i j g p
-		   else raise (Split (true, i))
+		   else raise (Split (true, Node_ID.Id i))
 	       | _, Some ind_j, 0, _ -> 
 		   if Inductive.is_positive ind_j then raise Bottom;
 		   let g, p = nullify_inductive j (g, p) in 
@@ -156,12 +157,14 @@ module MAKE_SL_DOMAIN =
 		  
 	     	     
        let reduce_equalities_one_step: t -> (int*int*t) option = fun (g, p) ->
-	 if debug then print_debug "reduce_equalities_one_step t...\n";
+	 if debug then print_debug "reduce_equalities_one_step...\n";
 	 let rp = ref p in
 	   match P.pop_equality rp with
 	     | Some (i, j) ->
 		 let t, b = fusion i j (g, !rp) in
-		   if b then Some(i,j,t) else Some(j,i,t)
+		 let i, j = if b then i, j else j, i in
+		   if debug then print_debug "[reduce_equalities_one_step] reduced (%i, %i)\n" i j;
+		   Some(i, j, t)		     
 	     | None -> None
 (*
        let reduce_equalities: t -> t = fun (g, p) ->
@@ -205,8 +208,8 @@ module MAKE_SL_DOMAIN =
 	   i, (g, p)
 	     
        let var_alloc: int -> offset list -> t -> t = fun i ol (g, p) ->
-	 if debug then print_debug "var_alloc [%s ]...\n" 
-	   (List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol);
+	 if debug then print_debug "var_alloc [%s ] at node %i\n" 
+	   (List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol) i;
 	 let g = G.create_fresh_node_index i g in
 	 let g = List.fold_left (fun g o -> G.add_edge i o 0 g) g ol in 
 	 let p = IntSet.fold (fun j p -> if j!=i then P.add_neq i j p else p) (G.domain g) p in
@@ -248,7 +251,7 @@ module MAKE_SL_DOMAIN =
 		 Inductive.source_parameters = ind.Inductive.source_parameters;
 		 Inductive.target_parameters = args;
 		 Inductive.length = Inductive.Unknown;}
-	     and ind1 =  
+	       and ind1 =  
 	       { Inductive.target = ind.Inductive.target;
 		 Inductive.source_parameters = args;
 		 Inductive.target_parameters = ind.Inductive.target_parameters;
@@ -258,7 +261,7 @@ module MAKE_SL_DOMAIN =
 	 with
 	   | No_value -> 
 	       error (Printf.sprintf "can not break inductive from %i: there's no inductive with no length" i)
-
+		 
        let split_inductive_backward: int -> t -> t = fun i (g, p) ->
 	 if debug then print_debug "split_inductive_backward %i t\n" i;
 	 try
@@ -296,7 +299,7 @@ module MAKE_SL_DOMAIN =
 	   let length = 
 	     match ind.Inductive.length with 
 	       | Inductive.Length i -> i
-	       | Inductive.Unknown -> raise (Split (true, i)) in
+	       | Inductive.Unknown -> raise (Split (true, Node_ID.Id i)) in
 	   let g = G.remove_inductive i g in
 	   let fresh, g = G.create_n_fresh_nodes D.number_of_fresh g in
 	   let g = List.fold_left2
@@ -325,8 +328,7 @@ module MAKE_SL_DOMAIN =
 	   | Invalid_argument _ ->	   
 	       error (Printf.sprintf "inductive from %i ill-formed" i)
   
-      let search: int -> offset -> t -> int * t = fun i o (g, p) -> 
-	 if debug then print_debug "search for %i%s\n" i (pp_offset o);
+      let bare_search: int -> offset -> t -> int * t = fun i o (g, p) -> 
 	 try get (G.get_edge i o g), (g, p) 
 	 with | No_value ->
 	   if not (List.mem o D.domain_offset) then
@@ -371,7 +373,7 @@ module MAKE_SL_DOMAIN =
 		     if u_candidates=[] then 
 		       raise Top
 		     else
-		       raise (Split(false, List.hd u_candidates))
+		       raise (Split(false, Node_ID.Id (List.hd u_candidates)))
 		 | [j] ->
 		     let g, p, j =
 		       let ind = get (G.get_inductive j g) in 
@@ -386,6 +388,12 @@ module MAKE_SL_DOMAIN =
 		       get (G.get_edge j o g), (g, p)
 		 | j::_ -> raise Bottom
 	   end
+	     
+      let search: int -> offset -> t -> int * t = fun i o (g, p) -> 
+	if debug then print_debug "search for %i%s\n" i (pp_offset o);
+	let i, t = bare_search i o (g, p) in
+	  if debug then print_debug "[search] found %i\n" i;
+	  i, t
 
        let mutate: int -> offset -> int -> t -> t = fun i o j (g, p) ->
 	 if debug then print_debug "mutate [%i%s := %i]\n" i (pp_offset o) j;
@@ -544,109 +552,60 @@ module MAKE_SL_DOMAIN =
 	 if debug then print_debug "MAKE ********test purposes only!\n";
 	 x, y
 
-     end: SL_DOMAIN)
-
-(*
-module A = MAKE_SL_DOMAIN(DLList)
-
-let p = A.P.empty
-let p = A.P.add_live 1 p
-let p = A.P.add_live 7 p
-let p = A.P.add_neq 5 0 p
-
-let g = A.G.empty
-let g = A.G.add_edge 1 Zero 2 g
-let g = A.G.add_inductive 2 
-  { Inductive.target=3; 
-    Inductive.source_parameters=[0]; 
-    Inductive.target_parameters=[4]; 
-    Inductive.length=Inductive.Unknown} g
-let g = A.G.add_edge 3 (RecordField ("next", Zero)) 5 g
-let g = A.G.add_edge 3 (RecordField ("prev", Zero)) 4 g
-let g = A.G.add_edge 3 (RecordField ("top", Zero)) 6 g
-let g = A.G.add_inductive 5 
-  { Inductive.target=0; 
-    Inductive.source_parameters=[3]; 
-    Inductive.target_parameters=[0]; 
-    Inductive.length=Inductive.Unknown} g
-let g = A.G.add_edge 7 Zero 3 g
-let g = A.G.add_edge 12 (RecordField ("method", Zero)) 11 g
-let g = A.G.add_edge 8 (RecordField ("method", Zero)) 11 g
-let g = A.G.add_edge 11 (RecordField ("method", Zero)) 32 g
-
-let t1 = A.mk g p 
-
-let p = A.P.empty
-let p = A.P.add_live 1 p
-let p = A.P.add_live 7 p
-let p = A.P.add_neq 0 9 p
-
-let g = A.G.empty
-let g = A.G.add_edge 1 Zero 4 g
-let g = A.G.add_inductive 4 
-  { Inductive.target=5; 
-    Inductive.source_parameters=[0]; 
-    Inductive.target_parameters=[6]; 
-    Inductive.length=Inductive.Unknown} g
-let g = A.G.add_edge 5 (RecordField ("next", Zero)) 9 g
-let g = A.G.add_edge 5 (RecordField ("prev", Zero)) 6 g
-let g = A.G.add_edge 5 (RecordField ("top", Zero)) 8 g
-let g = A.G.add_inductive 9 
-  { Inductive.target=0; 
-    Inductive.source_parameters=[5]; 
-    Inductive.target_parameters=[0]; 
-    Inductive.length=Inductive.Unknown} g
-let g = A.G.add_edge 7 Zero 5 g
-let g = A.G.add_edge 3 (RecordField ("method", Zero)) 2 g
-let g = A.G.add_edge 17 (RecordField ("method", Zero)) 2 g
-let g = A.G.add_edge 2 (RecordField ("method", Zero)) 21 g
-
-let t2 = A.mk g p 
-
-let _ = 
-  Printf.printf "%s" (A.pp t1);
-  Printf.printf "%s" (A.pp t2)
-
-let _ = 
-  if A.equals t1 t2 then Printf.printf "equals!\n"
-*)
-(*
-let t, _ = A.case_inductive_backward 1 t
-
-let _ = 
-  Printf.printf "%s" (A.pp t)
-
-let i, t = A.search 3 (RecordField ("next", Zero)) t
+    end
 
 
-let _, ot = A.reduce_equalities_one_step t []
-let t = get ot
-let _, ot = A.reduce_equalities_one_step t []
-let t = get ot
+module MAKE_SL_DOMAIN = 
+  functor (D: INDUCTIVE_DEF) -> functor (O: OPTION) ->
+    (struct
 
+       module X = MAKE_SL_LEAF_DOMAIN(D)(O)
 
-let _ = 
-  Printf.printf "Found:%i in\n%s" i (A.pp t)
-*)
-  
+       let name: string = X.name
+       type t = X.t
+       let empty: t = X.empty
+       let next: t -> Node_ID.t = fun t -> Node_ID.Id (X.next t)
+       let zero: t -> Node_ID.t = fun t -> Node_ID.Id (X.zero t)
+       let request_eq: Node_ID.t -> Node_ID.t -> t -> t = fun ni nj t ->
+	 let i = Node_ID.get ni and j = Node_ID.get nj in
+	   X.request_eq i j t
+       let request_neq: Node_ID.t -> Node_ID.t -> t -> t = fun ni nj t ->
+	 let i = Node_ID.get ni and j = Node_ID.get nj in
+	   X.request_neq i j t
+       let reduce_equalities_one_step: t -> (Node_ID.t * Node_ID.t * t) option = fun t ->
+	 match X.reduce_equalities_one_step t with
+	   | Some (i, j, t) ->
+	       Some (Node_ID.Id i, Node_ID.Id j, t)
+	   | _ -> None
+       let is_bottom: t -> bool = X.is_bottom
+       let create_fresh_node: t -> Node_ID.t * t = fun t -> 
+	 let i, t = X.create_fresh_node t in
+	   Node_ID.Id i, t
+       let malloc: offset list -> t -> Node_ID.t*t = fun ol t ->
+	 let i, t = X.malloc ol t in
+	   Node_ID.Id i, t
+       let var_alloc: Node_ID.t -> offset list -> t -> t = fun i o t -> 
+	 let i = Node_ID.get i in
+	   X.var_alloc i o t
+       let case_inductive_forward: Node_ID.t -> t -> t list = fun ni t ->
+	 let i = Node_ID.get ni in
+	   X.case_inductive_forward i t
+       let case_inductive_backward: Node_ID.t -> t -> t list = fun ni t ->
+	 let i = Node_ID.get ni in
+	   X.case_inductive_backward i t
+       let search: Node_ID.t -> offset -> t -> Node_ID.t * t = fun ni o t ->
+	 let i = Node_ID.get ni in
+	 let i, t = X.search i o t in
+	   Node_ID.Id i, t
+       let mutate: Node_ID.t -> offset -> Node_ID.t -> t -> t = fun ni o nj t ->
+	 let i = Node_ID.get ni and j = Node_ID.get nj in
+	   X.mutate i o j t
+       let canonicalize: t -> t = X.canonicalize
+       let equals: t -> t -> bool = X.equals
+       let is_include: t -> t -> bool = X.is_include
+       let union: t -> t -> t option = X.union
+       let widening: t -> t -> t option = X.widening
+       let pp: t -> unit = X.pp
+       let forget_inductive_length: t -> t = X.forget_inductive_length
 
-(*
-module A = MAKE_SL_DOMAIN(DLList)
-
-let _, t = A.malloc [Zero] A.empty
-let i, t = A.malloc [RecordField("next",Zero); RecordField("prev",Zero); RecordField("top",Zero)] t
-let t1 = get (A.try_fold i t)
-let t1 = A.unfold i t1
-let _, ot2 = A.reduce_equalities_one_step t1 []
-let t2 = get ot2
-let _, ot3 = A.reduce_equalities_one_step t2 []
-let t3 = get ot3
-
-let _ = 
-  Printf.printf "%s" (A.pp t);
-  Printf.printf "%s" (A.pp t1);
-  Printf.printf "%s" (A.pp t2);
-  Printf.printf "%s" (A.pp t3)
-
-
-*)
+     end: SL_DOMAIN) 

@@ -42,7 +42,7 @@ MLI_FILES=	$(AUTOGEN_MLI)
 CMI_FILES=	$(MLI_FILES:%.mli=%.cmi) 
 CMX_FILES=      $(ML_FILES:%.ml=%.cmx)
 analyzer: $(CMX_FILES) 
-	ocamlopt unix.cmxa $(CMX_FILES) -o analyzer
+	ocamlopt $(CMX_FILES) -o analyzer
 clean: 
 	rm -f *.cmi *.cmx *.o && \
 	rm -f analyzer *~ debug.log $(AUTOGEN) \
