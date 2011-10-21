@@ -211,6 +211,28 @@ module MAKE_PROD_SL_DOMAIN =
 		R.mutate ir o jr right in
 	{ left; right; }
 
+    let track_node: Node_ID.t -> t -> Path.t list -> Path.t list = fun k t l -> 
+      if debug then print_debug "track node %s\n" (Node_ID.pp k);
+      let i = Node_ID.left k and j = Node_ID.right k in
+      let l = 
+	match i with
+	  | Some i -> L.track_node i t.left l
+	  | None -> l in
+	match j with
+	  | Some j -> R.track_node j t.right l
+	  | None -> l
+
+    let reduce: t -> Node_ID.t option -> Path.t -> Node_ID.t option = fun t k p ->
+      if debug then print_debug "reduce with %s\n" (Path.pp p);
+      let i, j = match k with
+	| None -> None, None
+	| Some k -> Node_ID.left k, Node_ID.right k in
+	match L.reduce t.left i p, R.reduce t.right j p with
+	  | Some i, Some j -> Some (Node_ID.P (i, j))
+	  | Some i, None -> Some (Node_ID.Left i)
+	  | None, Some j -> Some (Node_ID.Right j)
+	  | None, None -> None
+
     let canonicalize: t -> t = fun t -> 
       if debug then print_debug "CANONICALIZATION\n";
       { left = L.canonicalize t.left;

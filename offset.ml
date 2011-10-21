@@ -96,3 +96,14 @@ module OffsetOrd =
 module OffsetMap = Map.Make(OffsetOrd)
 module OffsetSet = Set.Make(OffsetOrd)
 type offseted_node = int * offset
+
+module Path = 
+  struct
+    type t = int * offset list
+    let pp: t -> string = function
+      | i, [] -> Printf.sprintf "%i.[]" i
+      | i, o::l -> 
+	  List.fold_left 
+	    (fun s o -> Printf.sprintf "%s, %s" s (pp_offset o))
+	    (Printf.sprintf "%i. %s" i (pp_offset o)) l
+  end

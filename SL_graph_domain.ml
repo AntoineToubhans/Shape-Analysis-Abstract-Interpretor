@@ -15,6 +15,9 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
      
      let debug = O.debug
 
+     let print_debug x = 
+       Utils.print_debug ("SL_GRAPH_DOMAIN:\t" ^^ x) 
+
      type node =
 	 { edges: int OffsetMap.t;
 	   inductive : Inductive.t option;}
@@ -54,7 +57,7 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
 
      (* bad function: TO BE FIXED *)
      let compute_connex: t -> node IntMap.t list = fun t ->
-       if debug then print_debug "SL_GRAPH_DOMAIN: compute connex comps\n";
+       if debug then print_debug "compute connex comps\n";
        let get_n i (nodes, queue) = 
 	 try
 	   let n = IntMap.find i nodes in
@@ -167,17 +170,17 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
 
 
     let create_fresh_node: t -> int* t = fun t ->
-      if debug then print_debug "SL_GRAPH_DOMAIN: create fresh node...[%i]\n" t.next;
+      if debug then print_debug "create fresh node...[%i]\n" t.next;
       t.next, {t with next = t.next + 1}
 
     let create_fresh_node_index: int -> t -> t = fun i t ->
       if i<t.next then 
 	error (Printf.sprintf "can't create node at %i, not available..." i);
-      if debug then print_debug "SL_GRAPH_DOMAIN: create fresh node (index)...[%i]\n" i;
+      if debug then print_debug "create fresh node (index)...[%i]\n" i;
       {t with next = i+1}
 
     let create_n_fresh_nodes: int -> t -> int list* t = fun n t ->
-      if debug then print_debug "SL_GRAPH_DOMAIN: create %i fresh nodes...[%i,...,%i]\n" n t.next (t.next+n-1);
+      if debug then print_debug "create %i fresh nodes...[%i,...,%i]\n" n t.next (t.next+n-1);
       let l = ref [] in 
 	for i=t.next to t.next+n-1 do l:=i::(!l) done;
 	!l, {t with next = t.next + n}
@@ -255,7 +258,7 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
       IntMap.fold (fun i _ a -> f i a) t.nodes a
 
     let find: int -> offset -> t -> (offset * int) list = fun i o t ->
-      if debug then print_debug "SL_GRAPH_DOMAIN: finding edges from Node(%i)%s...\n" i (pp_offset o);
+      if debug then print_debug "finding edges from Node(%i)%s...\n" i (pp_offset o);
       try 
 	let n = IntMap.find i t.nodes 
 	and ffold: offset -> int -> (offset * int) list -> (offset * int) list = fun oo j l ->
@@ -304,7 +307,7 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
     (*  -  j@o |--> i                           *)
     (*  -  pred j o                             *)
     let is_reached_by_edge: int -> (int -> offset -> bool) -> t -> bool = fun i p t ->
-      if debug then print_debug "SL_GRAPH_DOMAIN: is_reached_by_edge %i p t\n" i;
+      if debug then print_debug "is_reached_by_edge %i p t\n" i;
       IntMap.exists
 	(fun j n -> OffsetMap.exists (fun o k -> k==i && p j o) n.edges) t.nodes
 
@@ -312,13 +315,13 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
     (*  -  j.c(a) *== i.c(b)                    *)
     (*  -  pred j a b                           *)
     let is_reached_by_inductive: int -> (int -> Inductive.t -> bool) -> t -> bool = fun i p t -> 
-      if debug then print_debug "SL_GRAPH_DOMAIN: is_reached_by_inductive %i p t\n" i;
+      if debug then print_debug "is_reached_by_inductive %i p t\n" i;
       IntMap.exists
 	(fun j n -> has n.inductive && (get n.inductive).Inductive.target==i && p j (get n.inductive))
 	t.nodes
 
     let is_reached: int -> (int -> bool) -> t -> bool = fun i p t ->
-      if debug then print_debug "SL_GRAPH_DOMAIN: is_reached %i p t\n" i;
+      if debug then print_debug "is_reached %i p t\n" i;
       is_reached_by_edge i (fun i _ -> p i) t || is_reached_by_inductive i (fun i _ -> p i) t	
 
 
@@ -341,7 +344,7 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
 	  
     let equals: int IntMap.t -> int IntMap.t -> t -> t -> (int IntMap.t * int IntMap.t) option =
       fun m1 m2 t1 t2 -> 
-	if debug then print_debug "SL_GRAPH_DOMAIN: checking [equals]\n";
+	if debug then print_debug "checking [equals]\n";
 	let acc = ref (IntMap.bindings m1) 
 	and m1 = ref m1 and m2 = ref m2 in
 	let add i j = 
@@ -403,7 +406,7 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
 	    (* now we deal with untracked nodes *)
 	    if debug then 
 	      print_debug 
-		"SL_GRAPH_DOMAIN: [equals] partial mapping found... resolving untracked nodes\n";
+		"[equals] partial mapping found... resolving untracked nodes\n";
 	    (* we get potential entry points of the graph *)
 	    let u_ep1 = 
 	      IntSet.filter 
@@ -442,18 +445,48 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
 	      done;
 	    if debug then  
 	      begin 
-		print_debug "SL_GRAPH_DOMAIN: [equals] mapping found:\n";
+		print_debug "[equals] mapping found:\n";
 		IntMap.iter 
-		  (fun i j -> print_debug "SL_GRAPH_DOMAIN: [equals] t1.Node(%i) = t2.Node(%i)\n" i j)
+		  (fun i j -> print_debug "[equals] t1.Node(%i) = t2.Node(%i)\n" i j)
 		  !m1
 	      end;
 	    Some(!m1, !m2) 
 	  with 
 	    | Nope e -> 
-		if debug then print_debug "SL_GRAPH_DOMAIN: [equals] no mapping found: %s\n" e;
+		if debug then print_debug "[equals] no mapping found: %s\n" e;
 		None
 
-     let pp_node: int -> node -> unit = fun i n ->
+    (* deep search first *)
+    let rec rec_find_path target t acc acc_r = 
+      match acc with 
+	| [] -> acc_r
+	| (lo, i)::acc -> 
+	    begin
+	      let acc_r = if i=target then lo::acc_r else acc_r in
+		try
+		  let n = IntMap.find i t.nodes in 
+		  let acc = 
+		    OffsetMap.fold 
+		      (fun o j acc -> 
+			 if List.exists (fun (_, i) -> i=j) acc then			 
+			   acc
+			 else
+			   (o::lo,j)::acc)
+		      n.edges acc in
+		    rec_find_path target t acc acc_r
+		with
+		  | Not_found -> rec_find_path target t acc acc_r
+	    end
+
+    let find_path: int -> int -> t -> Path.t list -> Path.t list = fun live i t l -> 
+      if debug then print_debug "looking for path from %i to %i\n" live i;
+      let l = rec_find_path i t [[], live] [] in
+      let l = List.map (fun o -> live, List.rev o) l in
+	if debug then print_debug "paths found: %s\n"
+	  (List.fold_left (fun s p -> Printf.sprintf "%s, %s" s (Path.pp p)) "" l);
+	l
+
+    let pp_node: int -> node -> unit = fun i n ->
        O.XML.print_italic "Node(%i):<br/>" i;
        OffsetMap.iter
 	 (fun o j ->  
@@ -469,21 +502,21 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
        IntMap.iter pp_node t.nodes
 
      let clean_node: int -> t -> t = fun i t ->
-       if debug then print_debug "SL_GRAPH_DOMAIN: Cleaning node %i\n" i;
+       if debug then print_debug "Cleaning node %i\n" i;
        if is_node_empty i t then
 	 { t with nodes = IntMap.remove i t.nodes }
        else
 	 t
 
      let clean: t -> t = fun t ->
-       if debug then print_debug "SL_GRAPH_DOMAIN: [Cleaning]\n";
+       if debug then print_debug "[Cleaning]\n";
        { t with nodes = 
 	   IntMap.filter 
 	     (fun _ n -> not (OffsetMap.is_empty n.edges) || n.inductive != None)
 	     t.nodes }
 	 
      let forget_inductive_length: t -> t = fun t ->
-       if debug then print_debug "SL_GRAPH_DOMAIN: forget inductive length\n";
+       if debug then print_debug "forget inductive length\n";
        let nodes = 
 	 IntMap.map 
 	   (fun n -> 

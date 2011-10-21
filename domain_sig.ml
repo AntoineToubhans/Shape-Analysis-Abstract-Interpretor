@@ -1,6 +1,5 @@
 (* domain signatures                          *)
-(*                last modified : AT 06/19/11 *)
-
+(*                last modified : AT 10/21/11 *)
 open Offset
 open Utils
 open Simple_C_syntax
@@ -143,6 +142,8 @@ module type SL_GRAPH_DOMAIN =
 
     val equals: int IntMap.t -> int IntMap.t -> t -> t -> (int IntMap.t * int IntMap.t) option 
 
+    val find_path: int -> int -> t -> Path.t list -> Path.t list
+
     val pp: t -> unit
 
     val forget_inductive_length: t -> t
@@ -247,6 +248,9 @@ module type SL_DOMAIN =
 
     val union: t -> t -> t option
     val widening: t -> t -> t option
+
+    val track_node: Node_ID.t -> t -> Path.t list -> Path.t list
+    val reduce: t -> Node_ID.t option -> Path.t -> Node_ID.t option
 
     val pp: t -> unit
 

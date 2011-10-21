@@ -79,6 +79,21 @@ module MAKE_DIS_DOMAIN =
 	       let t = List.hd l_t and i, o = List.hd l_io in
 		 try
 		   let j, t = S.search i o t in 
+		   (* ****************   REDUCTION   ************* *)
+		   let j = 
+		     if O.reduction = 2 && not (Node_ID.is_complete j) then
+		       begin
+			 if debug then print_debug 
+			   "**** path found incomplete: %s -> reducing...\n" 
+			   (Node_ID.pp j);
+			 let paths = S.track_node j t [] in
+			 let j = List.fold_left (S.reduce t) (Some j) paths in
+			 let j = get j in
+			   if debug then print_debug "**** reduction down to: %s\n" (Node_ID.pp j);
+			   j
+		       end
+		     else j in
+		   (* ****************   REDUCTION   ************* *)
 		   let lj, t = reduce_equalities [j] t in
 		   let lj = List.map List.hd lj in
 		     aux_search 
@@ -116,6 +131,21 @@ module MAKE_DIS_DOMAIN =
 	       let t = List.hd l_t and i, o = List.hd l_io and l_inv_t = List.hd l_inv in
 		 try
 		   let j, t = S.search i o t in 
+		   (* ****************   REDUCTION   ************* *)
+		   let j = 
+		     if O.reduction = 2 && not (Node_ID.is_complete j) then
+		       begin
+			 if debug then print_debug 
+			   "**** path found incomplete: %s -> reducing...\n" 
+			   (Node_ID.pp j);
+			 let paths = S.track_node j t [] in
+			 let j = List.fold_left (S.reduce t) (Some j) paths in
+			 let j = get j in
+			   if debug then print_debug "**** reduction down to: %s\n" (Node_ID.pp j);
+			   j
+		       end
+		     else j in
+		   (* ****************   REDUCTION   ************* *)
 		   let ljinv, t = reduce_equalities (j::l_inv_t) t in
 		   let lj = List.map List.hd ljinv and ll_inv_t = List.map List.tl ljinv in
 		     aux_search2 

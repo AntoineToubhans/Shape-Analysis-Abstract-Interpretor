@@ -403,6 +403,23 @@ module MAKE_SL_LEAF_DOMAIN =
 	   | _ ->
 	       error (Printf.sprintf "can not perform mutation [%i%s := %i]" i (pp_offset o) j)
 
+       let track_node: int -> t -> Path.t list -> Path.t list = fun i (g, p) l -> 
+	 if debug then print_debug "track node %i\n" i;
+	 List.flatten
+	   (List.map (fun live -> G.find_path live i g l) (P.get_lives p))
+
+       let rec rec_reduce i ol g = 
+	 try
+	   let i = G.get_edge i (List.hd ol) g in
+	     rec_reduce (get i) (List.tl ol) g
+	 with
+	   | Failure _ -> Some i
+	   | No_value -> None
+
+       let reduce: t -> Path.t -> int option = fun (g, _) (i, ol) ->
+	 if debug then print_debug "reduce with %s\n" (Path.pp (i, ol));
+	 rec_reduce i ol g
+
        (* attempt to fold at node i: produces either     *)
        (*  - Some t   if attempt was successful          *)
        (*  - none   if it can not be fold for any reason *)
@@ -600,6 +617,18 @@ module MAKE_SL_DOMAIN =
        let mutate: Node_ID.t -> offset -> Node_ID.t -> t -> t = fun ni o nj t ->
 	 let i = Node_ID.get ni and j = Node_ID.get nj in
 	   X.mutate i o j t
+       let track_node: Node_ID.t -> t -> Path.t list -> Path.t list = fun ni t l -> 
+	 let i = Node_ID.get ni in
+	   X.track_node i t l
+       let reduce: t -> Node_ID.t option -> Path.t -> Node_ID.t option = fun t i p ->
+	 match i with
+	   | Some i -> Some i
+	   | None -> 
+	       begin 
+		 match X.reduce t p with
+		   | None -> None
+		   | Some i -> Some (Node_ID.Id i)
+	       end
        let canonicalize: t -> t = X.canonicalize
        let equals: t -> t -> bool = X.equals
        let is_include: t -> t -> bool = X.is_include

@@ -130,6 +130,11 @@ module Node_ID =
 	| _, _, All x -> All x
 	| _ -> failwith "Node_ID.fusion error"
 
+    let rec is_complete: t -> bool = function
+      | Id _ | All _ -> true
+      | P (x, y) -> is_complete x && is_complete y
+      | _ -> false
+
     let rec max: t -> int = function
       | All x | Id x -> x
       | Left t | Right t -> max t
@@ -154,5 +159,3 @@ module Node_ID =
       | P (t1, t2) -> Printf.sprintf "P (%s, %s)" (pp t1) (pp t2)
 
   end
-
-
