@@ -22,7 +22,7 @@ module MAKE_DOMAIN =
 
        let debug = O.debug 
 
-       type t = 
+       type t =  
 	   { env: Node_ID.t IntMap.t;
 	     heap: D.t;
 	     var_decls: sc_var StringMap.t;

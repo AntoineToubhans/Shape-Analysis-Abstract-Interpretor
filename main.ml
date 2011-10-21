@@ -17,15 +17,17 @@ open Xml_gen
 let f_name = ref "" 
 and debug = ref false 
 and list_ind = ref []
+and reduction = ref 0
   
 let _ =   
   Arg.parse
     (Arg.align
        [ "-debug", Arg.Set debug, " Debug mode" ;
-	 "-SL", Arg.Unit (fun () -> list_ind:="SL"::(!list_ind)), "Singly linked list";
-	 "-TL", Arg.Unit (fun () -> list_ind:="TL"::(!list_ind)), "Topped singly linked list";
-	 "-DL", Arg.Unit (fun () -> list_ind:="DL"::(!list_ind)), "Doubly linked list";
-	 "-TDL", Arg.Unit (fun () -> list_ind:="TDL"::(!list_ind)), "Topped doubly linked list" ])
+	 "-r", Arg.Set_int reduction, " Reduction (0: no, 1: smart, 2: agressive)";
+	 "-SL", Arg.Unit (fun () -> list_ind:="SL"::(!list_ind)), " Singly linked list";
+	 "-TL", Arg.Unit (fun () -> list_ind:="TL"::(!list_ind)), " Topped singly linked list";
+	 "-DL", Arg.Unit (fun () -> list_ind:="DL"::(!list_ind)), " Doubly linked list";
+	 "-TDL", Arg.Unit (fun () -> list_ind:="TDL"::(!list_ind)), " Topped doubly linked list" ])
     (fun s -> f_name := s)  
     "Shape Analyzer by A.Toubhans"
 
@@ -44,6 +46,7 @@ let c: Simple_C_syntax.sc_command =
 
 module O = struct
   let debug = !debug
+  let reduction = !reduction
   let c_file = !f_name      
   module XML = XML_GEN(struct
 			 let c_file = !f_name

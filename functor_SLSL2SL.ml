@@ -122,7 +122,9 @@ module MAKE_PROD_SL_DOMAIN =
 	(List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol)
 	(Node_ID.pp k);
       let i, j = match k with
-	| Node_ID.P (i, j) -> i, j
+	  (* first case should never happen *)
+	| Node_ID.P (i, j) -> i, j 
+	| Node_ID.All i -> Node_ID.All i, Node_ID.All i
 	| _ -> error (Printf.sprintf "bad variable allocation: %s" (Node_ID.pp k)) in 
 	  let left = L.var_alloc i ol t.left 
 	  and right = R.var_alloc j ol t.right in
@@ -195,6 +197,7 @@ module MAKE_PROD_SL_DOMAIN =
 	  | Some il, Some jl ->
 	      L.mutate il o jl t.left
 	  | Some il, None ->
+	      (* lose presicion but still sound *)
 	      let jl, left = L.create_fresh_node t.left in
 		L.mutate il o jl left
       and right = 
@@ -203,6 +206,7 @@ module MAKE_PROD_SL_DOMAIN =
 	  | Some ir, Some jr ->
 	      R.mutate ir o jr t.right
 	  | Some ir, None ->
+	      (* lose presicion but still sound *)
 	      let jr, right = R.create_fresh_node t.right in
 		R.mutate ir o jr right in
 	{ left; right; }

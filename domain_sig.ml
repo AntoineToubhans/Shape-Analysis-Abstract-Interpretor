@@ -23,6 +23,7 @@ module type XML_GEN =
 module type OPTION = 
   sig
     val debug: bool
+    val reduction: int
     val c_file: string
     module XML: XML_GEN
   end
@@ -233,9 +234,6 @@ module type SL_DOMAIN =
     val case_inductive_forward: Node_ID.t -> t -> t list
     val case_inductive_backward: Node_ID.t -> t -> t list
 
-(*    val split_inductive_backward: Node_ID.t -> t -> t
-    val unfold: Node_ID.t -> t -> t *)
-
     val search: Node_ID.t -> offset -> t -> Node_ID.t * t
     (* mutate a o b t                *)
     (* t MUST contains       a@o->c  *)
@@ -253,8 +251,7 @@ module type SL_DOMAIN =
     val pp: t -> unit
 
     val forget_inductive_length: t -> t
-    (* test*)
-  (*  val mk: G.t -> P.t -> t*)
+
   end
 
 module type DIS_DOMAIN = 

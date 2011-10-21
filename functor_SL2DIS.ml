@@ -217,7 +217,8 @@ module MAKE_DIS_DOMAIN =
 	 match t with
 	   | D_Top -> D_Top, Node_ID.Id 0
 	   | Disjunction l_t ->
-	       let i = List.fold_left (fun n tt -> Node_ID.max n (S.next tt)) (Node_ID.Id 0) l_t in
+	       let i = List.fold_left (fun n tt -> max n (Node_ID.max (S.next tt))) 0 l_t in
+	       let i = Node_ID.All i in
 		 if debug then print_debug "[var_alloc] mem found: %s\n" (Node_ID.pp i);
 		 let t = Disjunction (List.map (fun tt -> S.var_alloc i l_o tt) l_t) in
 		   t, i

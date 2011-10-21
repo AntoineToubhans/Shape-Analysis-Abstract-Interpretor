@@ -104,16 +104,20 @@ module Node_ID =
       | Left of t
       | Right of t
       | P of t * t
-	  
+	  (* All i means i every where in th product *)
+      | All of int	 
+ 
     let get: t -> int = function 
-      | Id x -> x
+      | Id x | All x -> x
       | _ -> failwith "can't get the node ID"
 	  
     let left: t -> t option = function
       | Left x | P (x, _) -> Some x
+      | All x -> Some (All x)
       | _ -> None
     let right: t -> t option = function
       | Right x | P (_, x) -> Some x
+      | All x -> Some (All x)
       | _ -> None
 
     let rec fusion: t -> t -> t -> t = fun i j k -> 
@@ -123,9 +127,15 @@ module Node_ID =
 	| Right i, Right j, Right k -> Right (fusion i j k)
 	| Right i, Right j, P (l, k) -> P (l, fusion i j k)
 	| Id i, Id j, Id k -> Id (if i=k then j else k)
+	| _, _, All x -> All x
 	| _ -> failwith "Node_ID.fusion error"
 
-    let rec max: t -> t -> t = fun t1 t2 ->
+    let rec max: t -> int = function
+      | All x | Id x -> x
+      | Left t | Right t -> max t
+      | P (t1, t2) -> Pervasives.max (max t1) (max t2)
+
+(*    let rec Nmax: t -> t -> t = fun t1 t2 ->
       match t1, t2 with
 	| Id x, Id y -> Id (Pervasives.max x y)
 	| Id _, t | t, Id _ -> t
@@ -134,9 +144,10 @@ module Node_ID =
 	| Right t, P (t2, t3) | P (t2, t3), Right t -> P (t2, max t t3)
 	| Left t1, Right t2 | Right t2, Left t1 -> P (t1, t2)
 	| Right t1, Right t2 -> Right (max t1 t2)
-	| Left t1, Left t2 -> Left (max t1 t2)
+	| Left t1, Left t2 -> Left (max t1 t2) *)
 
-    let rec pp: t -> string = function 
+    let rec pp: t -> string = function  
+      | All x -> Printf.sprintf "Everywhere: %i" x
       | Id x -> Printf.sprintf "Id %i" x
       | Left t -> Printf.sprintf "Left (%s)" (pp t)
       | Right t -> Printf.sprintf "Right (%s)" (pp t)
