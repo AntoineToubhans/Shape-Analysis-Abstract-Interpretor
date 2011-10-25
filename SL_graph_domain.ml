@@ -457,7 +457,7 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
 		None
 
     (* deep search first *)
-    let rec rec_find_path target t acc acc_r = 
+    let rec rec_find_path visited target t acc acc_r = 
       match acc with 
 	| [] -> acc_r
 	| (lo, i)::acc -> 
@@ -468,19 +468,19 @@ module SL_GRAPH_DOMAIN = functor (O: OPTION) ->
 		  let acc = 
 		    OffsetMap.fold 
 		      (fun o j acc -> 
-			 if List.exists (fun (_, i) -> i=j) acc then			 
+			 if List.exists (fun i -> i=j) visited then			 
 			   acc
 			 else
 			   (o::lo,j)::acc)
 		      n.edges acc in
-		    rec_find_path target t acc acc_r
+		    rec_find_path (i::visited) target t acc acc_r
 		with
-		  | Not_found -> rec_find_path target t acc acc_r
+		  | Not_found -> rec_find_path (i::visited) target t acc acc_r
 	    end
 
     let find_path: int -> int -> t -> Path.t list -> Path.t list = fun live i t l -> 
       if debug then print_debug "looking for path from %i to %i\n" live i;
-      let l = rec_find_path i t [[], live] [] in
+      let l = rec_find_path [] i t [[], live] [] in
       let l = List.map (fun o -> live, List.rev o) l in
 	if debug then print_debug "paths found: %s\n"
 	  (List.fold_left (fun s p -> Printf.sprintf "%s, %s" s (Path.pp p)) "" l);
