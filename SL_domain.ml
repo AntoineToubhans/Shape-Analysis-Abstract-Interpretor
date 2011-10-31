@@ -408,17 +408,25 @@ module MAKE_SL_LEAF_DOMAIN =
 	 List.flatten
 	   (List.map (fun live -> G.find_path live i g l) (P.get_lives p))
 
-       let rec rec_reduce i ol g = 
+(*       let rec rec_reduce (g, p) i ol = 
 	 try
 	   let i = G.get_edge i (List.hd ol) g in
-	     rec_reduce (get i) (List.tl ol) g
+	     rec_reduce (g, p) (get i) (List.tl ol) 
 	 with
-	   | Failure _ -> Some i
-	   | No_value -> None
+	   | Failure _ -> (g, p), Some i
+	   | No_value -> (g, p), None *)
 
-       let reduce: t -> Path.t -> int option = fun (g, _) (i, ol) ->
+       let rec rec_reduce t i ol = 
+	 try
+	   let i, t = search i (List.hd ol) t in
+	     rec_reduce t i (List.tl ol) 
+	 with
+	   | Failure _ -> t, Some i
+	   | Top -> t, None
+
+       let reduce: t -> Path.t -> t * int option = fun t (i, ol) ->
 	 if debug then print_debug "reduce with %s\n" (Path.pp (i, ol));
-	 rec_reduce i ol g
+	 rec_reduce t i ol 
 
        (* attempt to fold at node i: produces either     *)
        (*  - Some t   if attempt was successful          *)
@@ -620,14 +628,14 @@ module MAKE_SL_DOMAIN =
        let track_node: Node_ID.t -> t -> Path.t list -> Path.t list = fun ni t l -> 
 	 let i = Node_ID.get ni in
 	   X.track_node i t l
-       let reduce: t -> Node_ID.t option -> Path.t -> Node_ID.t option = fun t i p ->
+       let reduce: t -> Node_ID.t option -> Path.t -> t * Node_ID.t option = fun t i p ->
 	 match i with
-	   | Some i -> Some i
+	   | Some i -> t, Some i
 	   | None -> 
 	       begin 
 		 match X.reduce t p with
-		   | None -> None
-		   | Some i -> Some (Node_ID.Id i)
+		   | t, None -> t, None
+		   | t, Some i -> t, Some (Node_ID.Id i)
 	       end
        let canonicalize: t -> t = X.canonicalize
        let equals: t -> t -> bool = X.equals

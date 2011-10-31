@@ -71,6 +71,26 @@ module MAKE_DIS_DOMAIN =
 		   (fun (ll_pt_r,lt_r) (ll_pt,lt) -> List.append ll_pt ll_pt_r, disjunction lt lt_r)
 		   ([], bottom) l
 
+       let refine: S.t -> Node_ID.t -> S.t * Node_ID.t = fun t p ->
+	 if Node_ID.is_complete p then
+	   begin
+	     if debug then print_debug 
+	       "**** path found complete: %s -> not reducing...\n" 
+	       (Node_ID.pp p);
+	     t, p
+	   end
+	 else
+	   begin
+	     if debug then print_debug 
+	       "**** path found incomplete: %s -> reducing...\n" 
+	       (Node_ID.pp p);
+	     let paths = S.track_node p t [] in
+	     let t, op = List.fold_left (fun (t, op) -> S.reduce t op) (t, Some p) paths in
+	     let p = get op in
+	       if debug then print_debug "**** reduction down to: %s\n" (Node_ID.pp p);
+	       t, p
+	   end
+
        let rec aux_search = fun t l_io acc_t acc_i -> 
 	 match t with 
 	   | D_Top -> D_Top, []
@@ -80,19 +100,10 @@ module MAKE_DIS_DOMAIN =
 		 try
 		   let j, t = S.search i o t in 
 		   (* ****************   REDUCTION   ************* *)
-		   let j = 
-		     if O.reduction = 2 && not (Node_ID.is_complete j) then
-		       begin
-			 if debug then print_debug 
-			   "**** path found incomplete: %s -> reducing...\n" 
-			   (Node_ID.pp j);
-			 let paths = S.track_node j t [] in
-			 let j = List.fold_left (S.reduce t) (Some j) paths in
-			 let j = get j in
-			   if debug then print_debug "**** reduction down to: %s\n" (Node_ID.pp j);
-			   j
-		       end
-		     else j in
+		   let t, j = 
+		     if O.reduction = 2 then
+		       refine t j
+		     else t, j in
 		   (* ****************   REDUCTION   ************* *)
 		   let lj, t = reduce_equalities [j] t in
 		   let lj = List.map List.hd lj in
@@ -132,19 +143,10 @@ module MAKE_DIS_DOMAIN =
 		 try
 		   let j, t = S.search i o t in 
 		   (* ****************   REDUCTION   ************* *)
-		   let j = 
-		     if O.reduction = 2 && not (Node_ID.is_complete j) then
-		       begin
-			 if debug then print_debug 
-			   "**** path found incomplete: %s -> reducing...\n" 
-			   (Node_ID.pp j);
-			 let paths = S.track_node j t [] in
-			 let j = List.fold_left (S.reduce t) (Some j) paths in
-			 let j = get j in
-			   if debug then print_debug "**** reduction down to: %s\n" (Node_ID.pp j);
-			   j
-		       end
-		     else j in
+		   let t, j = 
+		     if O.reduction = 2 then
+		       refine t j
+		     else t, j in
 		   (* ****************   REDUCTION   ************* *)
 		   let ljinv, t = reduce_equalities (j::l_inv_t) t in
 		   let lj = List.map List.hd ljinv and ll_inv_t = List.map List.tl ljinv in

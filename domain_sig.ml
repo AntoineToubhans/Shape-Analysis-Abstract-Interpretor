@@ -250,7 +250,7 @@ module type SL_DOMAIN =
     val widening: t -> t -> t option
 
     val track_node: Node_ID.t -> t -> Path.t list -> Path.t list
-    val reduce: t -> Node_ID.t option -> Path.t -> Node_ID.t option
+    val reduce: t -> Node_ID.t option -> Path.t -> t * Node_ID.t option
 
     val pp: t -> unit
 
