@@ -227,8 +227,17 @@ module MAKE_PROD_SL_DOMAIN =
       let i, j = match k with
 	| None -> None, None
 	| Some k -> Node_ID.left k, Node_ID.right k in
-      let (left, i) = L.reduce t.left i p
-      and (right, j) = R.reduce t.right j p in
+      let (left, i) = 
+	try 
+	  L.reduce t.left i p
+	with
+	  | Split (b, i) -> raise (Split (b, Node_ID.Left i))
+      and (right, j) = 
+	try
+	  R.reduce t.right j p 
+	with
+	  | Split (b, j) -> raise (Split (b, Node_ID.Right j))
+      in
 	{ left; right; },	
       match i, j with
 	| Some i, Some j -> Some (Node_ID.P (i, j))

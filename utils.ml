@@ -127,8 +127,9 @@ module Node_ID =
 	| Right i, Right j, Right k -> Right (fusion i j k)
 	| Right i, Right j, P (l, k) -> P (l, fusion i j k)
 	| Id i, Id j, Id k -> Id (if i=k then j else k)
-	| _, _, All x -> All x
-	| _ -> failwith "Node_ID.fusion error"
+	| _ -> k
+(*	| _, _, All x -> All x
+	| _ -> failwith "Node_ID.fusion error" *)
 
     let rec is_complete: t -> bool = function
       | Id _ | All _ -> true
