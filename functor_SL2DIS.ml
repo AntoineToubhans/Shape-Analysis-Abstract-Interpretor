@@ -11,7 +11,7 @@ open Simple_C_syntax
 (* Module DIS_Domain Functor                                   *)
 (* =========================================================== *)
 (*                                        Created: AT 06/23/11 *)
-(*                                  Last modified: AT 07/26/11 *)
+(*                                  Last modified: AT 11/08/11 *)
 
 let error(s: string) = failwith (Printf.sprintf "DIS_DOMAIN_ERROR: %s" s)
 
@@ -91,6 +91,22 @@ module MAKE_DIS_DOMAIN =
 	       t, p
 	   end
 
+       let u_search: S.t -> Node_ID.t -> offset -> S.t * Node_ID.t = fun t i o ->
+	 let j, t = 
+	   try
+	     S.search i o t 
+	   with
+	     | Top -> 
+		 if O.reduction = 1 then
+		   let t, i = refine t i in
+		     S.search i o t
+		 else
+		   raise Top
+	 in 
+	   if O.reduction = 2 then
+	     refine t j
+	   else t, j
+
        let rec aux_search = fun t l_io acc_t acc_i -> 
 	 match t with 
 	   | D_Top -> D_Top, []
@@ -98,13 +114,7 @@ module MAKE_DIS_DOMAIN =
 	   | Disjunction l_t ->
 	       let t = List.hd l_t and i, o = List.hd l_io in
 		 try
-		   let j, t = S.search i o t in 
-		   (* ****************   REDUCTION   ************* *)
-		   let t, j = 
-		     if O.reduction = 2 then
-		       refine t j
-		     else t, j in
-		   (* ****************   REDUCTION   ************* *)
+		   let t, j = u_search t i o in
 		   let lj, t = reduce_equalities [j] t in
 		   let lj = List.map List.hd lj in
 		     aux_search 
@@ -141,13 +151,7 @@ module MAKE_DIS_DOMAIN =
 	   | Disjunction l_t ->
 	       let t = List.hd l_t and i, o = List.hd l_io and l_inv_t = List.hd l_inv in
 		 try
-		   let j, t = S.search i o t in 
-		   (* ****************   REDUCTION   ************* *)
-		   let t, j = 
-		     if O.reduction = 2 then
-		       refine t j
-		     else t, j in
-		   (* ****************   REDUCTION   ************* *)
+		   let t, j = u_search t i o in
 		   let ljinv, t = reduce_equalities (j::l_inv_t) t in
 		   let lj = List.map List.hd ljinv and ll_inv_t = List.map List.tl ljinv in
 		     aux_search2 

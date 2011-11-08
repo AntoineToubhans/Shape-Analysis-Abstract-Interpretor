@@ -1,7 +1,8 @@
 open Domain_sig
 open Inductive_def
 open SL_domain
-open Functor_SLSL2SL
+open Simple_prod_SL
+open Pred_prod_SL
 open Functor_SL2DIS
 open Functor_DIS2DOM
 open Xml_gen
@@ -10,7 +11,7 @@ open Xml_gen
 (* Main file A Toubhans internship project                     *)
 (* =========================================================== *)
 (*                                        Created: AT 07/08/11 *)
-(*                                  Last modified: AT 07/25/11 *)
+(*                                  Last modified: AT 11/08/11 *)
 
   
 (* Parsing arguments *)
@@ -18,12 +19,15 @@ let f_name = ref ""
 and debug = ref false 
 and list_ind = ref []
 and reduction = ref 0
+and kind_of_product = ref 0
   
 let _ =   
   Arg.parse
     (Arg.align
        [ "-debug", Arg.Set debug, " Debug mode" ;
 	 "-r", Arg.Set_int reduction, " Reduction (0: no, 1: smart, 2: agressive)";
+	 "-s", Arg.Unit (fun () -> kind_of_product:=0), " Simple non relational product";
+	 "-p", Arg.Unit (fun () -> kind_of_product:=1), " Predicative product";
 	 "-SL", Arg.Unit (fun () -> list_ind:="SL"::(!list_ind)), " Singly linked list";
 	 "-TL", Arg.Unit (fun () -> list_ind:="TL"::(!list_ind)), " Topped singly linked list";
 	 "-DL", Arg.Unit (fun () -> list_ind:="DL"::(!list_ind)), " Doubly linked list";
@@ -66,8 +70,10 @@ let rec build_SL: string Utils.bTree -> (module SL_DOMAIN) = function
 	( val ( build_SL a ): SL_DOMAIN ) in
       let module T = 
 	( val ( build_SL b ): SL_DOMAIN ) in
-	( module MAKE_PROD_SL_DOMAIN(S)(T)(O): SL_DOMAIN )
-	
+	if !kind_of_product = 0 then
+	  ( module MAKE_SIMPLE_PROD_SL_DOMAIN(S)(T)(O): SL_DOMAIN )
+	else
+	  ( module MAKE_PRED_PROD_SL_DOMAIN(S)(T)(O): SL_DOMAIN )
 
 module SL = ( val ( build_SL ( Utils.list2bTree !list_ind ) ): SL_DOMAIN) 
 module DIS = MAKE_DIS_DOMAIN(SL)(O)

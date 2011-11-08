@@ -10,22 +10,21 @@ open Simple_C_syntax
 (* =========================================================== *)
 (* Module SL*SL -> SL_Domain Functor                           *)
 (* =========================================================== *)
-(*                                        Created: AT 07/23/11 *)
-(*                                  Last modified: AT 09/27/11 *)
+(*                                        Created: AT 11/02/11 *)
+(*                                  Last modified: AT 11/08/11 *)
 (* =========================================================== *)
-(*                                             simple product  *)
+(*                                        predicative product  *)
 
-let error(s: string) = failwith (Printf.sprintf "SL_PROD_SL_DOMAIN_ERROR: %s" s)
+let error(s: string) = failwith (Printf.sprintf "PRED_PROD_SL_DOMAIN_ERROR: %s" s)
 
-module MAKE_PROD_SL_DOMAIN =
+module MAKE_PRED_PROD_SL_DOMAIN =
   functor (L: SL_DOMAIN) -> 
     functor (R: SL_DOMAIN) -> 
       functor (O: OPTION) -> 
 (struct
 
    let debug = O.debug
-
-   let name = Printf.sprintf "SL_PROD_SL_DOMAIN"
+   let name = "PRED_PROD_SL_DOMAIN"
 
    let print_debug x = 
      Utils.print_debug ("%s:\t" ^^ x) name
@@ -283,7 +282,7 @@ module MAKE_PROD_SL_DOMAIN =
 	    end
 
     let pp: t -> unit = fun t -> 
-      O.XML.print_center "SL PROD DOMAIN";
+      O.XML.print_center "PRED_PROD_SL_DOMAIN";
       O.XML.printf "<div>\n<span class='dp_i'>\n";
       L.pp t.left;
       O.XML.printf "</span>\n<span class='dp_i'>";
