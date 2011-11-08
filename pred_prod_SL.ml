@@ -29,9 +29,15 @@ module MAKE_PRED_PROD_SL_DOMAIN =
    let print_debug x = 
      Utils.print_debug ("%s:\t" ^^ x) name
 
+   type b = { 
+     left: Node_ID.t Node_IDMap.t;
+     right: Node_ID.t Node_IDMap.t;
+   }
+       
    type t = 
        { left: L.t;
-	 right: R.t; }
+	 right: R.t; 
+	 bridge: b; }
 
    let empty = 
      { left = L.empty; 

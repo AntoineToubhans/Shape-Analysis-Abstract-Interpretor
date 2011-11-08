@@ -128,8 +128,6 @@ module Node_ID =
 	| Right i, Right j, P (l, k) -> P (l, fusion i j k)
 	| Id i, Id j, Id k -> Id (if i=k then j else k)
 	| _ -> k
-(*	| _, _, All x -> All x
-	| _ -> failwith "Node_ID.fusion error" *)
 
     let rec is_complete: t -> bool = function
       | Id _ | All _ -> true
@@ -141,17 +139,6 @@ module Node_ID =
       | Left t | Right t -> max t
       | P (t1, t2) -> Pervasives.max (max t1) (max t2)
 
-(*    let rec Nmax: t -> t -> t = fun t1 t2 ->
-      match t1, t2 with
-	| Id x, Id y -> Id (Pervasives.max x y)
-	| Id _, t | t, Id _ -> t
-	| P (t11, t12), P (t21, t22) -> P (max t11 t21, max t12 t22)
-	| Left t, P (t2, t3) | P (t2, t3), Left t -> P (max t t2, t3)
-	| Right t, P (t2, t3) | P (t2, t3), Right t -> P (t2, max t t3)
-	| Left t1, Right t2 | Right t2, Left t1 -> P (t1, t2)
-	| Right t1, Right t2 -> Right (max t1 t2)
-	| Left t1, Left t2 -> Left (max t1 t2) *)
-
     let rec pp: t -> string = function  
       | All x -> Printf.sprintf "Everywhere: %i" x
       | Id x -> Printf.sprintf "Id %i" x
@@ -159,4 +146,8 @@ module Node_ID =
       | Right t -> Printf.sprintf "Right (%s)" (pp t)
       | P (t1, t2) -> Printf.sprintf "P (%s, %s)" (pp t1) (pp t2)
 
+    let compare: t -> t -> int = fun s t -> String.compare (pp s) (pp t)
+
   end
+
+module Node_IDMap = Map.Make( Node_ID )

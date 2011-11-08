@@ -25,7 +25,7 @@ let _ =
   Arg.parse
     (Arg.align
        [ "-debug", Arg.Set debug, " Debug mode" ;
-	 "-r", Arg.Set_int reduction, " Reduction (0: no, 1: smart, 2: agressive)";
+	 "-r", Arg.Set_int reduction, " Reduction (0: no, 1: middle, 2: aggressive)";
 	 "-s", Arg.Unit (fun () -> kind_of_product:=0), " Simple non relational product";
 	 "-p", Arg.Unit (fun () -> kind_of_product:=1), " Predicative product";
 	 "-SL", Arg.Unit (fun () -> list_ind:="SL"::(!list_ind)), " Singly linked list";
