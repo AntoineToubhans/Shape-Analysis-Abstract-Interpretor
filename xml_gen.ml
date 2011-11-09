@@ -95,14 +95,16 @@ module XML_GEN =
        let box_D: css_class = 
 	  { name = ".box_D";
 	    properties = 
-	      ["background-color"; 
+	      ["color";
+	       "background-color"; 
 	       "border";
 	       "margin"; 
 	       "padding"; 
 	       "-moz-border-radius"; 
 	       "-webkit-border-radius"];
 	    values = 
-	      ["#EEEEEE";
+	      ["#000000";
+	       "#EEEEEE";
 	       "1px solid #888888";
 	       "10px";
 	       "10px";
@@ -137,8 +139,18 @@ module XML_GEN =
 	   properties = ["display"];
 	   values = ["inline-block"]; }
 
+       let body: css_class = 
+	 { name = "body";
+	   properties = 
+	     ["background-color";
+	      "color"];
+	   values = 
+	     ["#000500";
+	      "#FFFFFF"]; }
+
        let print_CSS () =   
 	 printf "<style type=\"text/css\">\n";
+	 print_css_class body;
 	 print_css_class box_E;
 	 print_css_class box_SL;
 	 print_css_class box_D;

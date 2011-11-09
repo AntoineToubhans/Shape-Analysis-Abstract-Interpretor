@@ -251,13 +251,18 @@ module MAKE_DIS_DOMAIN =
 	 if debug then print_debug "var_alloc [%s ]...\n" 
 	   (List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" l_o);
 	 match t with
-	   | D_Top -> D_Top, Node_ID.Id 0
-	   | Disjunction l_t ->
-	       let i = List.fold_left (fun n tt -> max n (Node_ID.max (S.next tt))) 0 l_t in
+	   | D_Top | Disjunction [] -> t, Node_ID.Id 0
+	   | Disjunction (t::l_t) ->
+	       let i = List.fold_left (fun i t -> Node_ID.max i (S.next t)) (S.next t) l_t in
+		 if debug then print_debug "[var_alloc] mem found: %s\n" (Node_ID.pp i);
+		 let t = Disjunction (List.map (fun tt -> S.var_alloc i l_o tt) (t::l_t)) in
+		   t, i
+
+(*	       let i = List.fold_left (fun n tt -> max n (Node_ID.max (S.next tt))) 0 l_t in
 	       let i = Node_ID.All i in
 		 if debug then print_debug "[var_alloc] mem found: %s\n" (Node_ID.pp i);
 		 let t = Disjunction (List.map (fun tt -> S.var_alloc i l_o tt) l_t) in
-		   t, i
+		   t, i *)
 
        let rec get_sc_hvalue: sc_hvalue -> Node_ID.t -> t -> t * Node_ID.t list * offset = fun e i t ->
 	 if debug then print_debug "[rec] get_sc_hvalue %s\n" (sc_hvalue2str e);

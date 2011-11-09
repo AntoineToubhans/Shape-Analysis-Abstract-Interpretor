@@ -107,6 +107,13 @@ module Node_ID =
 	  (* All i means i every where in th product *)
       | All of int	 
  
+    let rec pp: t -> string = function   
+      | All x -> Printf.sprintf "Everywhere: %i" x
+      | Id x -> Printf.sprintf "Id %i" x
+      | Left t -> Printf.sprintf "Left (%s)" (pp t)
+      | Right t -> Printf.sprintf "Right (%s)" (pp t)
+      | P (t1, t2) -> Printf.sprintf "P (%s, %s)" (pp t1) (pp t2)
+
     let get: t -> int = function 
       | Id x | All x -> x
       | _ -> failwith "can't get the node ID"
@@ -134,20 +141,22 @@ module Node_ID =
       | P (x, y) -> is_complete x && is_complete y
       | _ -> false
 
-    let rec max: t -> int = function
+    let rec greatestId: t -> int = function
       | All x | Id x -> x
-      | Left t | Right t -> max t
-      | P (t1, t2) -> Pervasives.max (max t1) (max t2)
+      | Left t | Right t -> greatestId t
+      | P (t1, t2) -> Pervasives.max (greatestId t1) (greatestId t2)
 
-    let rec pp: t -> string = function  
-      | All x -> Printf.sprintf "Everywhere: %i" x
-      | Id x -> Printf.sprintf "Id %i" x
-      | Left t -> Printf.sprintf "Left (%s)" (pp t)
-      | Right t -> Printf.sprintf "Right (%s)" (pp t)
-      | P (t1, t2) -> Printf.sprintf "P (%s, %s)" (pp t1) (pp t2)
+    let rec max: t -> t -> t = fun i j ->
+      match i, j with
+	| All x, y | y, All x -> All (Pervasives.max x (greatestId y))
+	| Id x, Id y -> Id (Pervasives.max x y)
+	| P (il, ir), P (jl, jr) -> P (max il jl, max ir jr) 
+	| _ -> failwith 
+	    (Printf.sprintf "Node_ID.max: bad args [%s, %s]" (pp i) (pp j))
 
     let compare: t -> t -> int = fun s t -> String.compare (pp s) (pp t)
 
   end
 
 module Node_IDMap = Map.Make( Node_ID )
+module Node_IDSet = Set.Make( Node_ID )

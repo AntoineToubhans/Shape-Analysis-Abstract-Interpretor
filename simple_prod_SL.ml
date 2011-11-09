@@ -37,10 +37,17 @@ module MAKE_SIMPLE_PROD_SL_DOMAIN =
      { left = L.empty; 
        right = R.empty; }
 
+   (* Simple Product can't propagate physical equalities *)
+   (* between left-handed and right-handed nodes, hence  *)
+   (* we use Node_ID.All to garantee that nodes which're *)
+   (* an address have same ID                            *)
    let next: t -> Node_ID.t = fun t -> 
-     Node_ID.P (L.next t.left, R.next t.right)
+     Node_ID.All (max (Node_ID.greatestId (L.next t.left)) (Node_ID.greatestId (R.next t.right)))
+
+(*   let next: t -> Node_ID.t = fun t -> 
+     Node_ID.P (L.next t.left, R.next t.right) *)
      
-   let zero: t -> Node_ID.t = fun t ->
+   let zero: t -> Node_ID.t = fun t -> 
      Node_ID.P (L.zero t.left, R.zero t.right)
 
    let request_eq: Node_ID.t -> Node_ID.t -> t -> t = fun i j t -> 

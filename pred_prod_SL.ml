@@ -11,7 +11,7 @@ open Simple_C_syntax
 (* Module SL*SL -> SL_Domain Functor                           *)
 (* =========================================================== *)
 (*                                        Created: AT 11/02/11 *)
-(*                                  Last modified: AT 11/08/11 *)
+(*                                  Last modified: AT 11/09/11 *)
 (* =========================================================== *)
 (*                                        predicative product  *)
 
@@ -36,8 +36,7 @@ module MAKE_PRED_PROD_SL_DOMAIN =
        
    type t = 
        { left: L.t;
-	 right: R.t; 
-	 bridge: b; }
+	 right: R.t; }
 
    let empty = 
      { left = L.empty; 
