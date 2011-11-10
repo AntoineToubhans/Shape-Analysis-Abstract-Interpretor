@@ -145,7 +145,7 @@ module XML_GEN =
 	     ["background-color";
 	      "color"];
 	   values = 
-	     ["#000500";
+	     ["#304030";
 	      "#FFFFFF"]; }
 
        let print_CSS () =   

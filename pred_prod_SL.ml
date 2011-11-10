@@ -11,17 +11,69 @@ open Simple_C_syntax
 (* Module SL*SL -> SL_Domain Functor                           *)
 (* =========================================================== *)
 (*                                        Created: AT 11/02/11 *)
-(*                                  Last modified: AT 11/09/11 *)
+(*                                  Last modified: AT 11/10/11 *)
 (* =========================================================== *)
 (*                                        predicative product  *)
 
 let error(s: string) = failwith (Printf.sprintf "PRED_PROD_SL_DOMAIN_ERROR: %s" s)
+
+module Pred_Over_Product : functor (O: OPTION) -> 
+sig
+  type t
+  val empty: t
+  val add: Node_ID.t -> t -> (Node_ID.t * Node_ID.t) option * t
+    (* Node_ID arg must be linear path     *)
+    (* there is at most one tree path in t *)
+    (* which corresponds                   *)
+  val get: t -> Node_ID.t -> Node_ID.t option
+  val pp: t -> unit 
+end = functor (O: OPTION) -> 
+struct
+  let debug = O.debug
+  let print_debug x = Utils.print_debug ("Predicates over product:\t" ^^ x)
+  type t = Node_IDSet.t
+  let empty: t = Node_IDSet.empty
+  let add: Node_ID.t -> t -> (Node_ID.t * Node_ID.t) option * t = fun p t -> 
+    if debug then print_debug "adding %s\n" (Node_ID.pp p);
+    let t, p, oeq = 
+      Node_IDSet.fold 
+	(fun q (t, p, o) -> 
+	   let oeq, op = Node_ID.fusion_eq q p in
+	   let o = match o, oeq with 
+	     | None, None -> None 
+	     | Some eq, None | None, Some eq -> Some eq
+	     | Some (leq1, req1), Some (leq2, req2) -> Some (Node_ID.union leq1 leq2, Node_ID.union req1 req2) 
+	   and t, p = match op with
+	     | None -> t, p
+	     | Some p -> Node_IDSet.remove q t, p in
+	     t, p, o)
+	t (t, p, None) in
+      oeq, Node_IDSet.add p t
+  let get: t -> Node_ID.t -> Node_ID.t option = fun t p -> 
+    if debug then print_debug "getting %s\n" (Node_ID.pp p);
+    let t = ref t and b = ref true and q = ref p in
+      while !b && not (Node_IDSet.is_empty !t) do
+	q:= Node_IDSet.choose !t;
+	t:= Node_IDSet.remove !q !t;
+	b:= not (Node_ID.is_include p !q)
+      done;
+      if !b && debug then print_debug "got nothing.\n";
+      if (not !b) && debug then print_debug "got %s\n" (Node_ID.pp !q);
+      if !b then None else Some !q
+  let pp: t -> unit = fun t ->
+    O.XML.print_bold "Predicates:<br/>";
+    Node_IDSet.iter
+      (fun i -> O.XML.printf "Eq[ %s ]<br/>" (Node_ID.pp i)) t
+end
+
+
 
 module MAKE_PRED_PROD_SL_DOMAIN =
   functor (L: SL_DOMAIN) -> 
     functor (R: SL_DOMAIN) -> 
       functor (O: OPTION) -> 
 (struct
+   module P = Pred_Over_Product(O)
 
    let debug = O.debug
    let name = "PRED_PROD_SL_DOMAIN"
@@ -29,11 +81,6 @@ module MAKE_PRED_PROD_SL_DOMAIN =
    let print_debug x = 
      Utils.print_debug ("%s:\t" ^^ x) name
 
-   type b = { 
-     left: Node_ID.t Node_IDMap.t;
-     right: Node_ID.t Node_IDMap.t;
-   }
-       
    type t = 
        { left: L.t;
 	 right: R.t; }

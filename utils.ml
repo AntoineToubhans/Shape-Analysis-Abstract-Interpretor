@@ -99,14 +99,15 @@ let bTree_pp: ('a -> string) -> 'a bTree -> unit = fun p t -> bTree_pp_r 0 p t
 
 module Node_ID = 
   struct
+    (* tree path *) 
     type t =
-	Id of int
+ 	Id of int
       | Left of t
       | Right of t
       | P of t * t
 	  (* All i means i every where in th product *)
       | All of int	 
- 
+
     let rec pp: t -> string = function   
       | All x -> Printf.sprintf "Everywhere: %i" x
       | Id x -> Printf.sprintf "Id %i" x
@@ -154,7 +155,102 @@ module Node_ID =
 	| _ -> failwith 
 	    (Printf.sprintf "Node_ID.max: bad args [%s, %s]" (pp i) (pp j))
 
-    let compare: t -> t -> int = fun s t -> String.compare (pp s) (pp t)
+    (* i MUST be linear path *)
+    let rec is_include: t -> t -> bool = fun i j ->
+      match i, j with
+	| All _, _ | P _, _ -> failwith "Node_ID.is_include: first arg must be linear"
+	| Id x, Id y | Id x, All y -> x=y
+	| Left x, Left y | Left x, P (y, _) 
+	| Right x, Right y | Right x, P (_, y) -> is_include x y
+	| Left x, All y | Right x, All y -> is_include x (All y)
+	| _ -> false
+
+    (*******************************************************)
+    (*    /\        /\          /    /             /\      *)
+    (*   /  \      /  \   -->  / =  /   , Some(   /  \   ) *)
+    (*  /\  /     /\  /\      /\   /\            /\  /\    *)
+    (* a  b c    a' b'c d    a  b a' b'         a b  c d   *)
+    (*******************************************************)
+    (*    /\        /\                             /\      *)
+    (*   /  \      /  \   -->  None     , Some(   /  \   ) *)
+    (*   \  /\    /\  /                          /\  /\    *)
+    (*    b c d  a  b c                         a b  c d   *)
+    (*******************************************************)
+    (*    /\        /\                                     *)
+    (*   /  \      /  \   --> None,  None                  *)
+    (*  /\  /     /\  /\                                   *) 
+    (* a  b c    a' b'c'd                                  *)
+    (*******************************************************)
+    let fusion_eq: t -> t -> (t*t) option * t option = fun i j ->
+      let comb eq1 eq2 = 
+	match eq1, eq2 with
+	  | Some (eq1l, eq1r), Some (eq2l, eq2r) -> Some (P (eq1l, eq2l), P (eq1r, eq2r))
+	  | Some (eql, eqr), None -> Some (Left eql, Left eqr)
+	  | None, Some (eql, eqr) -> Some (Right eql, Right eqr)
+	  | _ -> None in
+      let rec f i j = 
+	match i, j with
+	  | Id x, Id y | Id x, All y | All x, Id y -> 
+	      if x=y then Id x, None, true else Id x, Some(Id x, Id y), false
+	  | All x, All y -> 
+	      if x=y then All x, None, true else All x, Some(All x, All y), false
+	  | _ ->
+	      begin
+		let oil = left i and oir = right i and ojl = left j and ojr = right j in
+		let left = match oil, ojl with
+		  | Some i, Some j -> Some (f i j)
+		  | Some i, None | None, Some i -> Some (i, None, false)
+		  | _ -> None
+		and right = match oir, ojr with
+		  | Some i, Some j -> Some (f i j)
+		  | Some i, None | None, Some i -> Some (i, None, false)
+		  | _ -> None in
+		  match left, right with
+		    | Some (l, eql, bl), Some (r, eqr, br) -> 
+			P (l, r), comb eql eqr, (bl || br)
+		    | Some (l, eql, bl), None -> 
+			Left l, comb eql None, bl
+		    | None, Some (r, eqr, br) -> 
+			Right r, comb None eqr, br
+		    | _ -> failwith "Node_ID.fusion_eq: this should never happen"
+	      end in
+      let k, eq, b = f i j in 
+	if b then eq, Some k else None, None
+(*
+	  | Left i, Left j ->
+	      let k, eq, b = f i j in
+		Left k, (match eq with | None -> None | Some eq -> Some (Left eq)), b
+
+      let oil = left i and oir = right i and ojl = left j and ojr = right j in
+      let leq, l = match oil, ojl with
+	| Some i, Some j -> fusion_eq i j
+	| None, _ -> None, None
+
+      match i, j with 
+	| Id x, Id y -> if x=y then None, Some i else None, None
+	| P (x, y), P (z, t) -> 
+	| _ -> None, None *)
+
+    (******************************************)
+    (*    /\        /\               /\       *)
+    (*   /  \      /  \   -->       /  \      *)
+    (*  /   /      \   \           /\  /\     *)
+    (* a    c       b   d         a b  c d    *)
+    (******************************************)
+    (*    /\        /\                        *)
+    (*   /  \      /  \   -->   error         *)
+    (*  /   /     /    \                      *)
+    (* a    c    a      d                     *)
+    (******************************************)	    
+    let rec union: t -> t -> t = fun i j ->
+      match i, j with
+	| P (x, y), P (z, t) -> P (union x z, union y t)
+	| Left x, P(y, z) | P (x, z), Left y -> P (union x y, z)
+	| Right x, P(y, z) | P (y, x), Right z -> P (y, union x z)
+	| Left x, Right y | Right y, Left x -> P (x, y)
+	| _ -> failwith "Node_ID.union: args must be disjoint"
+
+    let compare: t -> t -> int = fun s t -> String.compare (pp s) (pp t) 
 
   end
 
