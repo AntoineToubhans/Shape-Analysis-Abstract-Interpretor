@@ -21,7 +21,7 @@ module Pred_Over_Product : functor (O: OPTION) ->
 sig
   type t
   val empty: t
-  val add: Node_ID.t -> t -> (Node_ID.t * Node_ID.t) option * t
+  val add: Node_ID.t -> t -> (Node_ID.t * Node_ID.t) list * t
     (* Node_ID arg must be linear path     *)
     (* there is at most one tree path in t *)
     (* which corresponds                   *)
@@ -33,22 +33,21 @@ struct
   let print_debug x = Utils.print_debug ("Predicates over product:\t" ^^ x)
   type t = Node_IDSet.t
   let empty: t = Node_IDSet.empty
-  let add: Node_ID.t -> t -> (Node_ID.t * Node_ID.t) option * t = fun p t -> 
+  let add: Node_ID.t -> t -> (Node_ID.t * Node_ID.t) list * t = fun p t -> 
     if debug then print_debug "adding %s\n" (Node_ID.pp p);
-    let t, p, oeq = 
+    let t, p, list_eq = 
       Node_IDSet.fold 
-	(fun q (t, p, o) -> 
+	(fun q (t, p, list_eq) -> 
 	   let oeq, op = Node_ID.fusion_eq q p in
-	   let o = match o, oeq with 
-	     | None, None -> None 
-	     | Some eq, None | None, Some eq -> Some eq
-	     | Some (leq1, req1), Some (leq2, req2) -> Some (Node_ID.union leq1 leq2, Node_ID.union req1 req2) 
+	   let list_eq = match oeq with 
+	     | None -> list_eq
+	     | Some eq -> eq::list_eq
 	   and t, p = match op with
 	     | None -> t, p
 	     | Some p -> Node_IDSet.remove q t, p in
-	     t, p, o)
-	t (t, p, None) in
-      oeq, Node_IDSet.add p t
+	     t, p, list_eq)
+	t (t, p, []) in
+      list_eq, Node_IDSet.add p t
   let get: t -> Node_ID.t -> Node_ID.t option = fun t p -> 
     if debug then print_debug "getting %s\n" (Node_ID.pp p);
     let t = ref t and b = ref true and q = ref p in
@@ -83,11 +82,13 @@ module MAKE_PRED_PROD_SL_DOMAIN =
 
    type t = 
        { left: L.t;
-	 right: R.t; }
+	 right: R.t; 
+	 predicates: P.t; }
 
    let empty = 
      { left = L.empty; 
-       right = R.empty; }
+       right = R.empty; 
+       predicates = P.empty; }       
 
    let next: t -> Node_ID.t = fun t -> 
      Node_ID.P (L.next t.left, R.next t.right)
@@ -107,7 +108,7 @@ module MAKE_PRED_PROD_SL_DOMAIN =
        match ir, jr with
 	 | Some ir, Some jr -> R.request_eq ir jr t.right
 	 | _ -> t.right in
-       { left; right; }
+       { left; right; predicates = t.predicates; }
 
    let request_neq: Node_ID.t -> Node_ID.t -> t -> t = fun i j t -> 
      if debug then print_debug "request_neq %s %s t\n" (Node_ID.pp i) (Node_ID.pp j);
@@ -121,7 +122,15 @@ module MAKE_PRED_PROD_SL_DOMAIN =
        match ir, jr with
 	 | Some ir, Some jr -> R.request_neq ir jr t.right
 	 | _ -> t.right in
-       { left; right; }
+       { left; right; predicates = t.predicates; }
+
+   let add_pred: Node_ID.t -> t -> t = fun p t ->
+     if debug then print_debug "adding product predicate: Eq[ %s ]...\n" (Node_ID.pp p);
+     let list_eq, pred = P.add p t.predicates in
+       List.fold_left
+	 (fun t (p1, p2) -> request_eq p1 p2 t)
+	 { t with predicates = pred }
+	 list_eq
 
     let reduce_equalities_one_step: t -> (Node_ID.t * Node_ID.t * t) option = fun t -> 
       if debug then print_debug "reduce_equalities_one_step t...\n";
@@ -133,7 +142,7 @@ module MAKE_PRED_PROD_SL_DOMAIN =
 	      Some
 		(Node_ID.Left i,
 		 Node_ID.Left j,
-		 { left;  right = t.right; })		 
+		 { left;  right = t.right; predicates = t.predicates; })		 
 	  | None -> 
 	      begin
 		let r_reos = 
@@ -144,7 +153,7 @@ module MAKE_PRED_PROD_SL_DOMAIN =
 			Some
 			  (Node_ID.Right i,
 			   Node_ID.Right j,
-			   { left = t.left; right; })
+			   { left = t.left; right; predicates = t.predicates; })
 		    | None -> 
 			None
 	      end
@@ -159,27 +168,27 @@ module MAKE_PRED_PROD_SL_DOMAIN =
       let i, left = L.create_fresh_node t.left 
       and j, right = R.create_fresh_node t.right in
 	if debug then print_debug "create_fresh_node...[%s]\n" (Node_ID.pp (Node_ID.P (i, j))); 
-	Node_ID.P (i, j), { left; right; }
+	Node_ID.P (i, j), { left; right; predicates = t.predicates; }
 
     let malloc: offset list -> t -> Node_ID.t * t = fun ol t -> 
       if debug then print_debug "malloc [%s ]...\n" 
 	(List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol);
       let i, left = L.malloc ol t.left 
       and j, right = R.malloc ol t.right in
-	Node_ID.P (i, j), { left; right; }
+	Node_ID.P (i, j), { left; right; predicates = t.predicates; }
 
     let var_alloc: Node_ID.t -> offset list -> t -> t = fun k ol t -> 
       if debug then print_debug "var_alloc [%s ] at %s\n" 
 	(List.fold_left (fun s o -> Printf.sprintf "%s %s" s (pp_offset o)) "" ol)
 	(Node_ID.pp k);
       let i, j = match k with
-	  (* first case should never happen *)
 	| Node_ID.P (i, j) -> i, j 
 	| Node_ID.All i -> Node_ID.All i, Node_ID.All i
 	| _ -> error (Printf.sprintf "bad variable allocation: %s" (Node_ID.pp k)) in 
 	  let left = L.var_alloc i ol t.left 
 	  and right = R.var_alloc j ol t.right in
-	    { left; right; }
+	    add_pred k
+	      { left; right; predicates = t.predicates; }
 
     let case_inductive_forward: Node_ID.t -> t -> t list = fun i t -> 
       if debug then print_debug "case_inductive_forward %s t\n" (Node_ID.pp i);
@@ -191,11 +200,9 @@ module MAKE_PRED_PROD_SL_DOMAIN =
 	match Node_ID.right i with
 	  | Some i -> R.case_inductive_forward i t.right
 	  | None -> [t.right] in
-(*	if List.length lefts = 1 && List.length rights = 1 then
-	  error (Printf.sprintf "can not break inductive: there's no mapping for %i in the product" i); *)
 	List.flatten
 	  (List.map
-	     (fun left -> List.map (fun right -> { left; right; }) rights)
+	     (fun left -> List.map (fun right -> { left; right; predicates = t.predicates; }) rights)
 	     lefts)		
  
     let case_inductive_backward: Node_ID.t -> t -> t list = fun i t -> 
@@ -210,7 +217,7 @@ module MAKE_PRED_PROD_SL_DOMAIN =
 	  | None -> [t.right] in
 	List.flatten
 	  (List.map
-	     (fun left -> List.map (fun right -> { left; right; }) rights)
+	     (fun left -> List.map (fun right -> { left; right; predicates = t.predicates; }) rights)
 	     lefts)		
 
     let search: Node_ID.t -> offset -> t -> Node_ID.t * t = fun k o t -> 
@@ -236,7 +243,7 @@ module MAKE_PRED_PROD_SL_DOMAIN =
 	| None, Some j -> Node_ID.Right j
 	| _ -> raise Top in
 	if debug then print_debug "[search] found: %s\n" (Node_ID.pp k);
-	k, { left; right; }
+	k, { left; right; predicates = t.predicates; }
 
     let mutate: Node_ID.t -> offset -> Node_ID.t -> t -> t = fun i o j t ->  
       if debug then print_debug "mutate\n";
@@ -260,7 +267,7 @@ module MAKE_PRED_PROD_SL_DOMAIN =
 	      (* lose presicion but still sound *)
 	      let jr, right = R.create_fresh_node t.right in
 		R.mutate ir o jr right in
-	{ left; right; }
+	{ left; right; predicates = t.predicates; }
 
     let track_node: Node_ID.t -> t -> Path.t list -> Path.t list = fun k t l -> 
       if debug then print_debug "track node %s\n" (Node_ID.pp k);
@@ -289,7 +296,7 @@ module MAKE_PRED_PROD_SL_DOMAIN =
 	with
 	  | Split (b, j) -> raise (Split (b, Node_ID.Right j))
       in
-	{ left; right; },	
+	{ left; right; predicates = t.predicates; },	
       match i, j with
 	| Some i, Some j -> Some (Node_ID.P (i, j))
 	| Some i, None -> Some (Node_ID.Left i)
@@ -299,7 +306,8 @@ module MAKE_PRED_PROD_SL_DOMAIN =
     let canonicalize: t -> t = fun t -> 
       if debug then print_debug "CANONICALIZATION\n";
       { left = L.canonicalize t.left;
-	right = R.canonicalize t.right; }
+	right = R.canonicalize t.right; 
+	predicates = t.predicates; }
 
     let equals: t -> t -> bool =  fun t1 t2 -> 
       if debug then print_debug "checking [equals]\n";
@@ -318,8 +326,10 @@ module MAKE_PRED_PROD_SL_DOMAIN =
 	      match R.union t1.right t2.right with
 		| None -> None
 		| Some right ->
-		    Some { left; right; }
-	    end
+		    (* !!!TODO: preds? union shall provide a *)
+		    (*mapping between nodes of t1 and t2     *)
+		    Some { left; right; predicates = P.empty; }
+	    end 
 
     let widening: t -> t -> t option = fun t1 t2 ->
       if debug then print_debug "computing [Widening]\n";
@@ -330,12 +340,16 @@ module MAKE_PRED_PROD_SL_DOMAIN =
 	      match R.widening t1.right t2.right with
 		| None -> None
 		| Some right ->
-		    Some { left; right; }
+		    (* !!!TODO: preds? union shall provide a *)
+		    (*mapping between nodes of t1 and t2     *)
+		    Some { left; right; predicates = P.empty; }
 	    end
 
     let pp: t -> unit = fun t -> 
       O.XML.print_center "PRED_PROD_SL_DOMAIN";
-      O.XML.printf "<div>\n<span class='dp_i'>\n";
+      O.XML.printf "<div class=\"box_SL\">\n";
+      P.pp t.predicates;
+      O.XML.printf "</div>\n<div>\n<span class='dp_i'>\n";
       L.pp t.left;
       O.XML.printf "</span>\n<span class='dp_i'>";
       R.pp t.right;
@@ -343,6 +357,7 @@ module MAKE_PRED_PROD_SL_DOMAIN =
 
     let forget_inductive_length: t -> t = fun t -> 
       { left = L.forget_inductive_length t.left;
-	right = R.forget_inductive_length t.right; }
+	right = R.forget_inductive_length t.right; 
+	predicates = t.predicates; }
 	   
  end: SL_DOMAIN)

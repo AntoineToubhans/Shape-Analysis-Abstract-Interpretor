@@ -64,38 +64,56 @@ let intlist2str: int list -> string = fun l ->
     | [] -> "[]" 
     | x::l -> 
 	"["^(List.fold_left (fun s a -> Printf.sprintf "%s, %i" s a) (Printf.sprintf "%i" x) l)^"]" *)
-	  
-type 'a bTree = Empty | Leaf of 'a | Node of 'a bTree * 'a bTree 
+
+module BinaryTree = 
+  struct
+    type 'a t = Empty | Leaf of 'a | Node of 'a t * 'a t 
   
-let rec bTree_flatten: 'a bTree list -> 'a bTree list = fun l ->
-  match l with
-    | [] -> []
-    | t::[] -> [t]
-    | t1::t2::l -> (Node (t1, t2))::(bTree_flatten l)
+    let rec flatten: 'a t list -> 'a t list = fun l ->
+      match l with
+	| [] -> []
+	| t::[] -> [t]
+	| t1::t2::l -> (Node (t1, t2))::(flatten l)
+	    
+    let list: 'a list -> 'a t = fun l ->
+      let rec f l = 
+	match l with | [] -> Empty | t::[] -> t | _ -> f (flatten l) in
+	f (List.map (fun a -> Leaf a) l)
 
-let list2bTree: 'a list -> 'a bTree = fun l ->
-  let rec f l = 
-    match l with | [] -> Empty | t::[] -> t | _ -> f (bTree_flatten l) in
-    f (List.map (fun a -> Leaf a) l)
+    let rec pp_blank: int -> unit = fun i ->
+      if i>0 then begin 
+	Printf.printf "-"; 
+	pp_blank (i-1)
+      end
 
-
-let rec pp_blank: int -> unit = fun i ->
-  if i>0 then begin 
-    Printf.printf "-"; 
-    pp_blank (i-1)
+    let rec pp_r: int -> ('a -> string) -> 'a t -> unit = fun i p t ->
+      pp_blank i;
+      match t with
+	| Empty -> Printf.printf "Empty\n" 
+	| Leaf a -> Printf.printf "%s\n" (p a)
+	| Node (a, b) -> 
+	    Printf.printf "Prod:\n";
+	    pp_r (i+1) p a;
+	    pp_r (i+1) p b
+    let pp: ('a -> string) -> 'a t -> unit = fun p t -> pp_r 0 p t
+    
+    (* basic tools *)
+    let rec iter: ('a -> unit) -> 'a t -> unit = fun f t ->
+      match t with
+	| Empty -> ()
+	| Leaf a -> f a
+	| Node (t1, t2) -> iter f t1; iter f t2
+    let rec map: ('a -> 'b) -> 'a t -> 'b t = fun f t ->
+      match t with
+	| Empty -> Empty
+	| Leaf a -> Leaf (f a)
+	| Node (t1, t2) -> Node (map f t1, map f t2)
+    let rec fold: ('a -> 'b -> 'b) -> 'a t -> 'b -> 'b = fun f t b ->
+      match t with
+	| Empty -> b
+	| Leaf a -> f a b 
+	| Node (t1, t2) -> fold f t2 (fold f t1 b)
   end
-
-let rec bTree_pp_r: int -> ('a -> string) -> 'a bTree -> unit = fun i p t ->
-  pp_blank i;
-  match t with
-    | Empty -> Printf.printf "Empty\n" 
-    | Leaf a -> Printf.printf "%s\n" (p a)
-    | Node (a, b) -> 
-	Printf.printf "Prod:\n";
-	bTree_pp_r (i+1) p a;
-	bTree_pp_r (i+1) p b
-
-let bTree_pp: ('a -> string) -> 'a bTree -> unit = fun p t -> bTree_pp_r 0 p t
 
 module Node_ID = 
   struct
@@ -187,9 +205,9 @@ module Node_ID =
 	  | Some (eq1l, eq1r), Some (eq2l, eq2r) -> Some (P (eq1l, eq2l), P (eq1r, eq2r))
 	  | Some (eql, eqr), None -> Some (Left eql, Left eqr)
 	  | None, Some (eql, eqr) -> Some (Right eql, Right eqr)
-	  | _ -> None in
+	  | _ -> None in 
       let rec f i j = 
-	match i, j with
+	match i, j with 
 	  | Id x, Id y | Id x, All y | All x, Id y -> 
 	      if x=y then Id x, None, true else Id x, Some(Id x, Id y), false
 	  | All x, All y -> 
@@ -216,20 +234,6 @@ module Node_ID =
 	      end in
       let k, eq, b = f i j in 
 	if b then eq, Some k else None, None
-(*
-	  | Left i, Left j ->
-	      let k, eq, b = f i j in
-		Left k, (match eq with | None -> None | Some eq -> Some (Left eq)), b
-
-      let oil = left i and oir = right i and ojl = left j and ojr = right j in
-      let leq, l = match oil, ojl with
-	| Some i, Some j -> fusion_eq i j
-	| None, _ -> None, None
-
-      match i, j with 
-	| Id x, Id y -> if x=y then None, Some i else None, None
-	| P (x, y), P (z, t) -> 
-	| _ -> None, None *)
 
     (******************************************)
     (*    /\        /\               /\       *)

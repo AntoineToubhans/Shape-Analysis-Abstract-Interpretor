@@ -57,15 +57,15 @@ module O = struct
 		       end)
 end
 
-let rec build_SL: string Utils.bTree -> (module SL_DOMAIN) = function
-  | Utils.Empty -> 
+let rec build_SL: string Utils.BinaryTree.t -> (module SL_DOMAIN) = function
+  | Utils.BinaryTree.Empty -> 
       Printf.printf "No inductive given!\n";
       failwith "Stopped"
-  | Utils.Leaf ind ->
+  | Utils.BinaryTree.Leaf ind ->
       let module I = 
 	( val (Hashtbl.find selector ind): INDUCTIVE_DEF ) in
 	( module MAKE_SL_DOMAIN(I)(O): SL_DOMAIN )
-  | Utils.Node (a, b) -> 
+  | Utils.BinaryTree.Node (a, b) -> 
       let module S = 
 	( val ( build_SL a ): SL_DOMAIN ) in
       let module T = 
@@ -75,7 +75,7 @@ let rec build_SL: string Utils.bTree -> (module SL_DOMAIN) = function
 	else
 	  ( module MAKE_PRED_PROD_SL_DOMAIN(S)(T)(O): SL_DOMAIN )
 
-module SL = ( val ( build_SL ( Utils.list2bTree !list_ind ) ): SL_DOMAIN) 
+module SL = ( val ( build_SL ( Utils.BinaryTree.list !list_ind ) ): SL_DOMAIN) 
 module DIS = MAKE_DIS_DOMAIN(SL)(O)
 module DOM = MAKE_DOMAIN(DIS)(O)
 
