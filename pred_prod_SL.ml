@@ -243,7 +243,7 @@ module MAKE_PRED_PROD_SL_DOMAIN =
 	| None, Some j -> Node_ID.Right j
 	| _ -> raise Top in
 	if debug then print_debug "[search] found: %s\n" (Node_ID.pp k);
-	k, { left; right; predicates = t.predicates; }
+	k, add_pred k { left; right; predicates = t.predicates; }
 
     let mutate: Node_ID.t -> offset -> Node_ID.t -> t -> t = fun i o j t ->  
       if debug then print_debug "mutate\n";

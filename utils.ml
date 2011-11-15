@@ -260,3 +260,113 @@ module Node_ID =
 
 module Node_IDMap = Map.Make( Node_ID )
 module Node_IDSet = Set.Make( Node_ID )
+
+module Nodes_Mapping:
+sig
+  type b
+  val empty: b
+  val identity: b
+  val get: int -> b -> int option
+  val get_rev: int -> b -> IntSet.t
+  val add: int -> int -> b -> b
+  type t
+  val mapsto: Node_ID.t -> t -> Node_ID.t
+  val is_mapped_by: Node_ID.t -> t -> Node_IDSet.t
+  val combine: t -> t -> t
+end = struct
+  type b = 
+      Partial_Identity of int IntMap.t * IntSet.t IntMap.t
+    | Enum of int IntMap.t * IntSet.t IntMap.t
+  let empty: b = Enum (IntMap.empty, IntMap.empty)
+  let identity: b = Partial_Identity (IntMap.empty, IntMap.empty)
+  let get: int -> b -> int option = fun i -> function
+    | Partial_Identity (m, _) ->
+	begin 
+	  try Some (IntMap.find i m) with | Not_found -> Some i
+	end
+    | Enum (m, _) ->
+	begin 
+	  try Some (IntMap.find i m) with | Not_found -> None
+	end
+
+  let pi_get_rev k rev = try IntMap.find k rev with | Not_found -> IntSet.singleton k
+  let en_get_rev k rev = try IntMap.find k rev with | Not_found -> IntSet.empty
+
+  let get_rev: int -> b -> IntSet.t = fun i -> function
+    | Partial_Identity (_, rev) -> pi_get_rev i rev
+    | Enum (_, rev) -> en_get_rev i rev
+
+  let pi_add_rev k i rev =
+    let rev_k = pi_get_rev k rev in
+    let rev_k = IntSet.add i rev_k in
+      if IntSet.cardinal rev_k = 1 && i=k then 
+	IntMap.remove k rev
+      else
+	IntMap.add k rev_k rev
+  let en_add_rev k i rev =
+    let rev_k = pi_get_rev k rev in
+    let rev_k = IntSet.add i rev_k in
+      IntMap.add k rev_k rev
+  let pi_rm_rev k i rev =
+    let rev_k = pi_get_rev k rev in
+    let rev_k = IntSet.remove i rev_k in
+      if IntSet.cardinal rev_k = 1 && IntSet.choose rev_k = k then 
+	IntMap.remove k rev
+      else
+	IntMap.add k rev_k rev
+  let en_rm_rev k i rev =
+    let rev_k = pi_get_rev k rev in
+    let rev_k = IntSet.remove i rev_k in
+      if IntSet.is_empty rev_k then
+	IntMap.remove k rev
+      else
+	IntMap.add k rev_k rev
+
+  let add: int -> int -> b -> b = fun i j -> function 
+    | Partial_Identity (m, rev) -> 
+	if IntMap.mem i m then
+	  (* i is mapped to some k *)
+	  let k = IntMap.find i m in
+	  let rev = pi_rm_rev k i rev in	    
+	  let rev = pi_add_rev j i rev in
+	    Partial_Identity (IntMap.add i j m, rev) 
+	else
+	  (* i is mapped to i *)
+	  let rev = pi_rm_rev i i rev in
+	  let rev = pi_add_rev j i rev in
+	    Partial_Identity (IntMap.add i j m, rev) 
+    | Enum (m, rev) -> 
+	if IntMap.mem i m then
+	  (* i is mapped to some k *)
+	  let k = IntMap.find i m in
+	  let rev = en_rm_rev k i rev in	    
+	  let rev = en_add_rev j i rev in
+	    Partial_Identity (IntMap.add i j m, rev) 
+	else
+	  (* i is not mapped *)
+	  let rev = pi_add_rev j i rev in
+	    Partial_Identity (IntMap.add i j m, rev) 
+	  
+  type t = b BinaryTree.t
+  let b_mapsto: int -> b -> int = fun i (m, _) ->
+    try IntMap.find i m 
+    with | Not_found -> i
+  let rec mapsto: Node_ID.t -> t -> Node_ID.t = fun p t ->
+    match t with
+      | BinaryTree.Empty -> failwith "Nodes_Mapping.mapsto: t is an Empty tree\n"
+	(* this can fail if p isn't All or Id *)
+      |	BinaryTree.Leaf b -> Node_ID.Id (b_mapsto (Node_ID.get p) b)
+      | BinaryTree.Node (t1, t2) -> 
+	  begin
+	    match p with
+	      | Node_ID.P (p1, p2) -> Node_ID.P (mapsto p1 t1, mapsto p2 t2)
+	      | Node_ID.Left p -> Node_ID.Left (mapsto p t1) 
+	      | Node_ID.Right p -> Node_ID.Right (mapsto p t2)
+	      | _ -> failwith "Nodes_Mapping.mapsto: bad args\n"
+	  end	  
+  let b_is_mapped_by: int -> b -> int list = fun i (_, m) -> 
+    []
+  let is_mapped_by: Node_ID.t -> t -> Node_ID.t list = fun p t ->
+    []
+  let combine: t -> t -> t = fun t1 t2 -> BinaryTree.Node (t1, t2)
+end
