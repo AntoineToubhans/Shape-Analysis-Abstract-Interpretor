@@ -146,6 +146,13 @@ module Node_ID =
       | All x -> Some (All x)
       | _ -> None
 
+    let combine: t option -> t option -> t option = fun t1 t2 ->
+      match t1, t2 with
+	| Some t1, Some t2 -> Some (P (t1, t2))
+	| Some t, None -> Some (Left t)
+	| None, Some t -> Some (Right t)
+	| _ -> None
+
     let rec fusion: t -> t -> t -> t = fun i j k -> 
       match i, j, k with
 	| Left i, Left j, Left k -> Left (fusion i j k)
@@ -348,25 +355,32 @@ end = struct
 	    Partial_Identity (IntMap.add i j m, rev) 
 	  
   type t = b BinaryTree.t
-  let b_mapsto: int -> b -> int = fun i (m, _) ->
-    try IntMap.find i m 
-    with | Not_found -> i
-  let rec mapsto: Node_ID.t -> t -> Node_ID.t = fun p t ->
-    match t with
-      | BinaryTree.Empty -> failwith "Nodes_Mapping.mapsto: t is an Empty tree\n"
+
+  let rec r_mapsto: Node_ID.t -> t -> Node_ID.t option = fun p -> function
+    | BinaryTree.Empty -> None
 	(* this can fail if p isn't All or Id *)
-      |	BinaryTree.Leaf b -> Node_ID.Id (b_mapsto (Node_ID.get p) b)
-      | BinaryTree.Node (t1, t2) -> 
-	  begin
-	    match p with
-	      | Node_ID.P (p1, p2) -> Node_ID.P (mapsto p1 t1, mapsto p2 t2)
-	      | Node_ID.Left p -> Node_ID.Left (mapsto p t1) 
-	      | Node_ID.Right p -> Node_ID.Right (mapsto p t2)
-	      | _ -> failwith "Nodes_Mapping.mapsto: bad args\n"
-	  end	  
-  let b_is_mapped_by: int -> b -> int list = fun i (_, m) -> 
-    []
-  let is_mapped_by: Node_ID.t -> t -> Node_ID.t list = fun p t ->
-    []
+    | BinaryTree.Leaf b -> 
+	let oi = get (Node_ID.get p) b in
+	  begin match oi with
+	    | Some i -> Some (Node_ID.Id i)
+	    | None -> None
+	  end
+    | BinaryTree.Node (t1, t2) -> 
+	let oleft = Node_ID.left p and oright = Node_ID.right p in
+	let l = map_default (fun p -> r_mapsto p t1) None oleft  
+	and r = map_default (fun p -> r_mapsto p t2) None oright in
+	  Node_ID.combine l r
+
+  let mapsto: Node_ID.t -> t -> Node_ID.t = fun p t ->
+    match r_mapsto p t with
+      | Some p -> p
+      | None -> failwith 
+	  (Printf.sprintf 
+	     "Nodes_Mapping.masto: bad args, can't get the image of %s\n" 
+	     (Node_ID.pp p))
+
+  let is_mapped_by: Node_ID.t -> t -> Node_IDSet.t = fun p t ->
+    Node_IDSet.empty
+
   let combine: t -> t -> t = fun t1 t2 -> BinaryTree.Node (t1, t2)
 end
