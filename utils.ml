@@ -379,8 +379,24 @@ end = struct
 	     "Nodes_Mapping.masto: bad args, can't get the image of %s\n" 
 	     (Node_ID.pp p))
 
-  let is_mapped_by: Node_ID.t -> t -> Node_IDSet.t = fun p t ->
-    Node_IDSet.empty
+  let rec is_mapped_by: Node_ID.t -> t -> Node_IDSet.t = fun p -> function
+    | BinaryTree.Empty -> Node_IDSet.empty
+    | BinaryTree.Leaf b -> 
+	let i = Node_ID.get p in
+	let i_set = get_rev i b in
+	  IntSet.fold
+	    (fun i s -> Node_IDSet.add (Node_ID.Id i) s) i_set Node_IDSet.empty
+    | BinaryTree.Node (t1, t2) -> 
+	let oleft = Node_ID.left p and oright = Node_ID.right p in
+	let sleft = map_default (fun p -> is_mapped_by p t1) Node_IDSet.empty oleft 
+	and sright = map_default (fun p -> is_mapped_by p t2) Node_IDSet.empty oright in
+	  Node_IDSet.fold
+	    (fun p s_p ->
+	       Node_IDSet.fold 
+		 (fun q set -> Node_IDSet.add (Node_ID.P (p, q)) set)
+		 sright s_p)
+	    sleft Node_IDSet.empty
+	    
 
   let combine: t -> t -> t = fun t1 t2 -> BinaryTree.Node (t1, t2)
 end

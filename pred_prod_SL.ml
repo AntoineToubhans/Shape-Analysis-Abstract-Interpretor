@@ -27,6 +27,8 @@ sig
     (* which corresponds                   *)
   val get: t -> Node_ID.t -> Node_ID.t option
   val pp: t -> unit 
+  val shift: Nodes_Mapping.t -> t -> t
+  val union: t -> t -> t
 end = functor (O: OPTION) -> 
 struct
   let debug = O.debug
@@ -63,6 +65,12 @@ struct
     O.XML.print_bold "Predicates:<br/>";
     Node_IDSet.iter
       (fun i -> O.XML.printf "Eq[ %s ]<br/>" (Node_ID.pp i)) t
+  let shift: Nodes_Mapping.t -> t -> t = fun map t ->
+    if debug then print_debug "shifting...\n";
+    t
+  let union: t -> t -> t = fun t1 t2 ->
+    if debug then print_debug "Union...\n";
+    empty
 end
 
 
