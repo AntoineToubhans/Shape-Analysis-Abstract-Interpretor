@@ -277,6 +277,7 @@ sig
   val get_rev: int -> b -> IntSet.t
   val add: int -> int -> b -> b
   type t
+  val inj: b -> t
   val mapsto: Node_ID.t -> t -> Node_ID.t
   val is_mapped_by: Node_ID.t -> t -> Node_IDSet.t
   val combine: t -> t -> t
@@ -355,7 +356,7 @@ end = struct
 	    Partial_Identity (IntMap.add i j m, rev) 
 	  
   type t = b BinaryTree.t
-
+  let inj: b -> t = fun b -> BinaryTree.Leaf b
   let rec r_mapsto: Node_ID.t -> t -> Node_ID.t option = fun p -> function
     | BinaryTree.Empty -> None
 	(* this can fail if p isn't All or Id *)

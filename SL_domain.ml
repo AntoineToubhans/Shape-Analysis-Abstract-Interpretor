@@ -537,6 +537,25 @@ module MAKE_SL_LEAF_DOMAIN =
 	     | None -> false
 	     | Some (m1, m2) -> P.equals m1 m2 p1 p2
 
+       let is_include_with_mapping: t -> t -> Nodes_Mapping.b option = fun (g1, p1) (g2, p2) -> 
+	 if debug then print_debug "checking [is_include_with_mapping]\n";
+	 let matching_nodes: int IntMap.t = 
+	   List.fold_left 
+	     (fun m i -> IntMap.add i i m)
+	     IntMap.empty (P.get_lives p1) in
+	   (* on graphs, for now, inclusion is equality  *)
+	   (* sound and sufficient with canonicalization *)
+	   match G.equals matching_nodes matching_nodes g1 g2 with
+	     | None -> None
+	     | Some (m1, m2) -> 
+		 if P.is_include m1 m2 p1 p2 then
+		   (* pretty dummy conversion *)
+		   let map = Nodes_Mapping.empty in
+		   let map = IntMap.fold (fun i j map -> Nodes_Mapping.add i j map) m1 map in
+		     Some map
+		 else
+		   None
+
        let is_include: t -> t -> bool = fun (g1, p1) (g2, p2) -> 
 	 if debug then print_debug "checking [is_include]\n";
 	 let matching_nodes: int IntMap.t = 
@@ -549,18 +568,33 @@ module MAKE_SL_LEAF_DOMAIN =
 	     | None -> false
 	     | Some (m1, m2) -> P.is_include m1 m2 p1 p2
 
-       let union: t -> t -> t option = fun t1 t2 ->
+       let union: t -> t -> (Nodes_Mapping.b * Nodes_Mapping.b * t) option = fun t1 t2 ->
 	 if debug then print_debug "computing [Union]\n";
-	 if is_include t1 t2 then Some t2 
-	 else if is_include t2 t1 then Some t1
-	 else None
+	 match is_include_with_mapping t1 t2 with
+	   | Some b -> 
+	       Some (b, Nodes_Mapping.identity, t2)
+	   | None ->
+	       begin
+		 match is_include_with_mapping t2 t1 with
+		   | Some b ->
+		       Some (Nodes_Mapping.identity, b, t1)
+		   | None -> None
+	       end
 
-       let widening: t -> t -> t option = fun t1 t2 ->
+       let widening: t -> t -> (Nodes_Mapping.b * Nodes_Mapping.b * t) option = fun t1 t2 ->
 	 if debug then print_debug "computing [Widening]\n";
-	 let t2 = canonicalize t2 in
-	   if is_include t1 t2 then Some t2 
-	   else if is_include t2 t1 then Some t1
-	   else None
+	 let t2 = canonicalize t2 
+	 and t1 = canonicalize t1 in
+	   match is_include_with_mapping t1 t2 with
+	     | Some b -> 
+		 Some (b, Nodes_Mapping.identity, t2)
+	     | None ->
+		 begin
+		   match is_include_with_mapping t2 t1 with
+		     | Some b ->
+			 Some (Nodes_Mapping.identity, b, t1)
+		     | None -> None
+		 end
 
        let pp: t -> unit = fun (g, p) -> 
 	 O.XML.print_center "SL DOMAIN";
@@ -640,8 +674,16 @@ module MAKE_SL_DOMAIN =
        let canonicalize: t -> t = X.canonicalize
        let equals: t -> t -> bool = X.equals
        let is_include: t -> t -> bool = X.is_include
-       let union: t -> t -> t option = X.union
-       let widening: t -> t -> t option = X.widening
+       let union: t -> t -> (Nodes_Mapping.t * Nodes_Mapping.t * t) option = fun u t ->
+	 match X.union u t with
+	   | Some (map_u, map_t, uni) ->
+	       Some (Nodes_Mapping.inj map_u, Nodes_Mapping.inj map_t, uni)
+	   | None -> None
+       let widening: t -> t -> (Nodes_Mapping.t * Nodes_Mapping.t * t) option = fun u t ->
+	 match X.widening u t with
+	   | Some (map_u, map_t, uni) ->
+	       Some (Nodes_Mapping.inj map_u, Nodes_Mapping.inj map_t, uni)
+	   | None -> None
        let pp: t -> unit = X.pp
        let forget_inductive_length: t -> t = X.forget_inductive_length
 

@@ -69,7 +69,7 @@ struct
     if debug then print_debug "shifting...\n";
     t
   let union: t -> t -> t = fun t1 t2 ->
-    if debug then print_debug "Union...\n";
+    if debug then print_debug "computing [Union]\n";
     empty
 end
 
@@ -325,33 +325,42 @@ module MAKE_PRED_PROD_SL_DOMAIN =
       if debug then print_debug "checking [is_include]\n";
       L.is_include t1.left t2.left && R.is_include t1.right t2.right
 
-    let union: t -> t -> t option = fun t1 t2 ->
+    let union: t -> t -> (Nodes_Mapping.t * Nodes_Mapping.t * t) option = fun t1 t2 ->
       if debug then print_debug "computing [Union]\n";
       match L.union t1.left t2.left with
 	| None -> None
-	| Some left -> 
+	| Some (ml1, ml2, left) -> 
 	    begin
 	      match R.union t1.right t2.right with
 		| None -> None
-		| Some right ->
-		    (* !!!TODO: preds? union shall provide a *)
-		    (*mapping between nodes of t1 and t2     *)
-		    Some { left; right; predicates = P.empty; }
+		| Some (mr1, mr2, right) ->
+		    let m1 = Nodes_Mapping.combine ml1 mr1
+		    and m2 = Nodes_Mapping.combine ml2 mr2 in
+		    let predicates = 
+		      P.union
+			(P.shift m1 t1.predicates)
+			(P.shift m2 t2.predicates) in
+		      Some ( m1, m2, { left; right; predicates; } )
 	    end 
 
-    let widening: t -> t -> t option = fun t1 t2 ->
+    let widening: t -> t -> (Nodes_Mapping.t * Nodes_Mapping.t * t) option = fun t1 t2 ->
       if debug then print_debug "computing [Widening]\n";
       match L.widening t1.left t2.left with
 	| None -> None
-	| Some left -> 
+	| Some (ml1, ml2, left) -> 
 	    begin
 	      match R.widening t1.right t2.right with
 		| None -> None
-		| Some right ->
-		    (* !!!TODO: preds? union shall provide a *)
-		    (*mapping between nodes of t1 and t2     *)
-		    Some { left; right; predicates = P.empty; }
-	    end
+		| Some (mr1, mr2, right) ->
+		    let m1 = Nodes_Mapping.combine ml1 mr1
+		    and m2 = Nodes_Mapping.combine ml2 mr2 in
+		    let predicates = 
+		      P.union
+			(P.shift m1 t1.predicates)
+			(P.shift m2 t2.predicates) in
+		      Some ( m1, m2, { left; right; predicates; } )
+	    end 
+
 
     let pp: t -> unit = fun t -> 
       O.XML.print_center "PRED_PROD_SL_DOMAIN";

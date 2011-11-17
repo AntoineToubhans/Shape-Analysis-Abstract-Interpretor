@@ -246,8 +246,8 @@ module type SL_DOMAIN =
     val equals: t -> t -> bool
     val is_include: t -> t -> bool
 
-    val union: t -> t -> t option
-    val widening: t -> t -> t option
+    val union: t -> t -> (Nodes_Mapping.t * Nodes_Mapping.t * t) option
+    val widening: t -> t -> (Nodes_Mapping.t * Nodes_Mapping.t * t) option
 
     val track_node: Node_ID.t -> t -> Path.t list -> Path.t list
     val reduce: t -> Node_ID.t option -> Path.t -> t * Node_ID.t option

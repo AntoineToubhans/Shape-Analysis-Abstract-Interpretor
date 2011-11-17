@@ -195,7 +195,7 @@ module MAKE_DIS_DOMAIN =
 		   | t1::l_t -> 
 		       begin 
 			 match S.union t t1 with
-			   | Some t -> 
+			   | Some (_, _, t) -> 
 			       t::(List.append l_t acc)
 			   | None -> 
 			       insert (t1::acc) l_t t 
@@ -222,7 +222,7 @@ module MAKE_DIS_DOMAIN =
 		   | t1::l_t -> 
 		       begin 
 			 match S.union t t1 with
-			   | Some t -> 
+			   | Some (_, _, t) -> 
 			       t::(List.append l_t acc)
 			   | None -> 
 			       insert (t1::acc) l_t t 

@@ -264,28 +264,34 @@ module MAKE_SIMPLE_PROD_SL_DOMAIN =
       if debug then print_debug "checking [is_include]\n";
       L.is_include t1.left t2.left && R.is_include t1.right t2.right
 
-    let union: t -> t -> t option = fun t1 t2 ->
+    let union: t -> t -> (Nodes_Mapping.t * Nodes_Mapping.t * t) option = fun t1 t2 ->
       if debug then print_debug "computing [Union]\n";
       match L.union t1.left t2.left with
 	| None -> None
-	| Some left -> 
+	| Some (ml1, ml2, left) -> 
 	    begin
 	      match R.union t1.right t2.right with
 		| None -> None
-		| Some right ->
-		    Some { left; right; }
+		| Some (mr1, mr2, right) ->
+		    Some (
+		      Nodes_Mapping.combine ml1 mr1,
+		      Nodes_Mapping.combine ml2 mr2,
+		      { left; right; })
 	    end
 
-    let widening: t -> t -> t option = fun t1 t2 ->
+    let widening: t -> t -> (Nodes_Mapping.t * Nodes_Mapping.t * t) option = fun t1 t2 ->
       if debug then print_debug "computing [Widening]\n";
       match L.widening t1.left t2.left with
 	| None -> None
-	| Some left -> 
+	| Some (ml1, ml2, left) -> 
 	    begin
 	      match R.widening t1.right t2.right with
 		| None -> None
-		| Some right ->
-		    Some { left; right; }
+		| Some (mr1, mr2, right) ->
+		    Some (
+		      Nodes_Mapping.combine ml1 mr1,
+		      Nodes_Mapping.combine ml2 mr2,
+		      { left; right; })
 	    end
 
     let pp: t -> unit = fun t -> 
